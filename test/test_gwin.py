@@ -28,7 +28,9 @@ import sys
 import pycbc
 import unittest
 import numpy
-import gwin, waveform
+from pycbc import distributions
+import gwin
+from pycbc import waveform
 from pycbc import psd as pypsd
 from utils import parse_args_cpu_only, simple_exit
 
@@ -63,7 +65,7 @@ class TestInference(unittest.TestCase):
         psds = {"H1": psd, "L1": psd}
 
         # get a prior evaluator
-        uniform_prior = gwin.distributions.Uniform(tc=(tsig-0.2,tsig+0.2))
+        uniform_prior = distributions.Uniform(tc=(tsig-0.2,tsig+0.2))
         prior_eval = gwin.prior.PriorEvaluator(["tc"], uniform_prior)
 
         # setup likelihood evaluator
