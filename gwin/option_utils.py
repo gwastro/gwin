@@ -18,7 +18,6 @@
 """
 
 import logging
-import numpy
 import gwin.sampler
 from gwin import burn_in
 from pycbc import conversions
