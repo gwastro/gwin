@@ -26,9 +26,10 @@ This modules provides a list of implemented samplers for parameter estimation.
 """
 
 import numpy
-from gwin.sampler_kombine import KombineSampler
-from gwin.sampler_emcee import EmceeEnsembleSampler, EmceePTSampler
-from gwin.sampler_mcmc import MCMCSampler
+
+from .kombine import KombineSampler
+from .emcee import EmceeEnsembleSampler, EmceePTSampler
+from .mcmc import MCMCSampler
 
 # list of available samplers
 samplers = {

@@ -28,7 +28,8 @@ for parameter estimation.
 
 import numpy
 import logging
-from gwin.sampler_base import BaseMCMCSampler
+
+from .base import BaseMCMCSampler
 
 #
 # =============================================================================

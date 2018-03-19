@@ -26,10 +26,13 @@ This modules provides classes and functions for using the emcee sampler
 packages for parameter estimation.
 """
 
+from __future__ import absolute_import
+
 import numpy
-from gwin.sampler_base import BaseMCMCSampler, _check_fileformat
 from pycbc.io import FieldArray
 from pycbc.filter import autocorrelation
+
+from .base import BaseMCMCSampler, _check_fileformat
 
 #
 # =============================================================================

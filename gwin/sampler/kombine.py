@@ -26,8 +26,10 @@ This modules provides classes and functions for using the kombine sampler
 packages for parameter estimation.
 """
 
+from __future__ import absolute_import
+
 import numpy
-from gwin.sampler_base import BaseMCMCSampler
+from .base import BaseMCMCSampler
 
 #
 # =============================================================================
