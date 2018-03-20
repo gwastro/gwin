@@ -56,6 +56,11 @@ install_requires = [
     'corner',
 ]
 
+try:  # try to detect system install of lalinference
+    import lalinference
+except ImportError:  # fall-back to installing lalsuite wheels
+    install_requires.append('lalsuite')
+
 extras_require = {
     'kombine': ['kombine'],
     'emcee': ['emcee'],
