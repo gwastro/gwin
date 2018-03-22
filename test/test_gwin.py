@@ -24,90 +24,95 @@
 """
 These are the unittests for samplers in the gwin subpackage.
 """
-import sys
-import pycbc
-import unittest
+
+from collections import OrderedDict
+
 import numpy
+
+import pytest
+
 from pycbc import distributions
-from gwin import likelihood
-from gwin import sampler
 from pycbc.psd import analytical
 from pycbc.waveform import generator
-from utils import parse_args_cpu_only
-from utils import simple_exit
 
-# tests only need to happen on the CPU
-parse_args_cpu_only("Samplers")
+from gwin import likelihood
+from gwin import sampler
 
-class TestSamplers(unittest.TestCase):
+APPROXIMANTS = [
+    'IMRPhenomPv2',
+]
+CBC_TEST_PARAMETERS = OrderedDict([
+    ("mass1", 30.0),
+    ("mass2", 30.0),
+    ("tc", 100.0),
+    ("coa_phase", 1.1),
+    ("spin1x", 0.0),
+    ("spin1y", 0.0),
+    ("spin1z", 0.0),
+    ("spin2x", 0.0),
+    ("spin2y", 0.0),
+    ("spin2z", 0.0),
+    ("ra", 0.1),
+    ("dec", 0.1),
+    ("polarization", 0.1),
+    ("inclination", 0.1),
+    ("distance", 300.0),
+])
+LIKELIHOOD_EVALUATORS = [n for n in likelihood.likelihood_evaluators if
+                         not n.startswith('test_')]
 
-    def setUp(self, *args):
 
-        # set random seed
-        numpy.random.seed(1024)
+class TestSamplers(object):
+    # -- setup ----------------------------------
 
-        # set data parameters
-        self.ifos = ["H1", "L1", "V1"]
-        self.data_length = 4 # in seconds
-        self.sample_rate = 2048 # in Hertz
-        self.fdomain_samples = self.data_length * self.sample_rate / 2 + 1
-        self.delta_f = 1.0 / self.data_length
-        self.fmin = 30.0
+    @classmethod
+    def setup_class(cls):
+        cls.ifos = ['H1', 'L1', 'V1']
+        cls.epoch = CBC_TEST_PARAMETERS['tc']
 
-        # set an analyitcal PSD for each detector
-        psd = analytical.aLIGOZeroDetHighPower(self.fdomain_samples,
-                                               self.delta_f, self.fmin)
-        self.psds = {ifo : psd for ifo in self.ifos}
+        # PSD params
+        cls.data_length = 4 # in seconds
+        cls.sample_rate = 2048 # in Hertz
+        cls.fdomain_samples = cls.data_length * cls.sample_rate / 2 + 1
+        cls.delta_f = 1.0 / cls.data_length
+        cls.fmin = 30.0
 
-        # set parameter to use for generating waveform of test CBC signal
-        cbc_test_parameters = (
-            ("mass1", 30.0),
-            ("mass2", 30.0),
-            ("tc", 100.0),
-            ("coa_phase", 1.1),
-            ("spin1x", 0.0),
-            ("spin1y", 0.0),
-            ("spin1z", 0.0),
-            ("spin2x", 0.0),
-            ("spin2y", 0.0),
-            ("spin2z", 0.0),
-            ("ra", 0.1),
-            ("dec", 0.1),
-            ("polarization", 0.1),
-            ("inclination", 0.1),
-            ("distance", 300.0),
-        )
-        self.parameters, self.values = zip(*cbc_test_parameters)
-        self.epoch = dict(cbc_test_parameters)["tc"]
-
-        # get list of evaluators to test
-        self.likelihood_evals = [self.get_cbc_fdomain_likelihood_evaluator()]
-
-        # get a set of simulated command line options for sampler
+        # fake command-line options
         class Arguments(object):
             ntemps = 2
             nwalkers = 30
             niterations = 4
             update_interval = 2
             nprocesses = 2
-        self.opts = Arguments()
 
-    def get_cbc_fdomain_generator(self, approximant="IMRPhenomPv2"):
-        """ Returns the waveform generator class for a CBC signal in the
-        detector frame.
-        """
-        waveform_gen = generator.FDomainDetFrameGenerator(
-                           generator.FDomainCBCGenerator, self.epoch,
-                           variable_args=self.parameters,
-                           detectors=self.ifos,
-                           delta_f=self.delta_f, f_lower=self.fmin,
-                           approximant=approximant)
-        return waveform_gen
+        cls.opts = Arguments()
 
-    def get_prior_evaluator(self, parameters, values):
+    @pytest.fixture(scope='class')
+    def psd(self):
+        return analytical.aLIGOZeroDetHighPower(
+            self.fdomain_samples, self.delta_f, self.fmin)
+
+    @pytest.fixture(scope='class', params=APPROXIMANTS)
+    def waveform_generator(self, request):
+        return generator.FDomainDetFrameGenerator(
+            generator.FDomainCBCGenerator, self.epoch,
+            variable_args=list(CBC_TEST_PARAMETERS.keys()),
+            detectors=self.ifos,
+            delta_f=self.delta_f,
+            f_lower=self.fmin,
+            approximant=request.param,
+        )
+
+    @pytest.fixture
+    def waveform(self, waveform_generator):
+        return waveform_generator.generate(**CBC_TEST_PARAMETERS)
+
+    @pytest.fixture
+    def prior_eval(self):
         """ Returns the prior evaluator class initialized with a set of
         pre-defined distributions for each parameters.
         """
+        parameters, values = zip(*CBC_TEST_PARAMETERS.items())
         prior_dists = []
         for param, val in zip(parameters, values):
             if param in ["mass1", "mass2"]:
@@ -129,55 +134,26 @@ class TestSamplers(unittest.TestCase):
             prior_dists.append(dist)
         return distributions.JointDistribution(parameters, *prior_dists)
 
-    def get_likelihood_evaluator(self, waveform_gen, data, prior_eval):
-        """ Returns the likelihood evaluator class.
+    @pytest.fixture(params=LIKELIHOOD_EVALUATORS)
+    def likelihood_eval(self, waveform_generator, waveform, prior_eval, psd,
+                        request):
+        eval_class = likelihood.likelihood_evaluators[request.param]
+        return eval_class(
+            waveform_generator.variable_args, waveform_generator, waveform,
+            self.fmin, psds={ifo: psd for ifo in self.ifos},
+            prior=prior_eval, return_meta=False)
+
+    def test_likelihood_eval(self, likelihood_eval):
+        out = likelihood_eval(list(CBC_TEST_PARAMETERS.values()))
+        assert out.dtype.type is numpy.float64
+
+    @pytest.mark.parametrize('sampler_class', sampler.samplers.values())
+    def test_sampler(self, sampler_class, likelihood_eval):
+        """Runs each sampler for 4 iterations.
         """
-        likelihood_eval = likelihood.GaussianLikelihood(waveform_gen.variable_args,
-                                             waveform_gen, data, self.fmin,
-                                             psds=self.psds, prior=prior_eval,
-                                             return_meta=False)
-        return likelihood_eval
+        # init sampler
+        s = sampler_class.from_cli(self.opts, likelihood_eval)
+        s.set_p0()
 
-    def get_cbc_fdomain_likelihood_evaluator(self):
-        """ Returns the likelihood evalauator class for a CBC signal.
-        The data `FrequencySeries` used in the inner product is the signal
-        generated from the waveform parameters in `self.setUp`.
-        """
-
-        # assert that waveform generator returns a dict of complex
-        waveform_gen = self.get_cbc_fdomain_generator()
-        signal = waveform_gen.generate(**{p : v
-                                          for p, v in zip(self.parameters,
-                                                          self.values)})
-        assert(isinstance(signal, dict))
-        assert(signal.values()[0].dtype == numpy.complex128)
-
-        # assert that prior evaluator class returns a float
-        prior_eval = self.get_prior_evaluator(self.parameters, self.values)
-        p = prior_eval(**{p : v for p, v in zip(self.parameters,
-                                                self.values)})
-        assert(p.dtype == numpy.float64)
-
-        # assert that likelihood evaluator returns a float
-        # use generated waveform as data
-        likelihood_eval = self.get_likelihood_evaluator(waveform_gen,
-                                                        signal, prior_eval)
-        assert(likelihood_eval(self.values).dtype == numpy.float64)
-
-        return likelihood_eval
-
-    def test_sampler(self):
-        """ Runs each sampler for 4 iterations.
-        """
-        for likelihood_eval in self.likelihood_evals:
-            for _, sampler_class in sampler.samplers.iteritems():
-                s = sampler_class.from_cli(self.opts, likelihood_eval)
-                s.set_p0()
-                s.run(self.opts.niterations)
-
-suite = unittest.TestSuite()
-suite.addTest(unittest.TestLoader().loadTestsFromTestCase(TestSamplers))
-
-if __name__ == "__main__":
-    results = unittest.TextTestRunner(verbosity=2).run(suite)
-    simple_exit(results)
+        # run
+        s.run(self.opts.niterations)

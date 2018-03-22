@@ -1,0 +1,22 @@
+language: python
+
+python:
+  - '2.7'
+
+before_install:
+  - pip install pip setuptools --upgrade
+
+install:
+  - python -m pip install .
+
+before_script:
+  - python -m pip install coveralls "pytest>=2.8"
+
+script:
+  # run unit tests
+  - coverage run ./setup.py test
+
+after_success:
+  - coverage report
+
+cache: pip

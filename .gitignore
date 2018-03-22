@@ -42,4 +42,5 @@ pip-delete-this-directory.txt
 /*.patch
 
 # py.test cache dir
-/.cache
+/.cache/
+/.pytest_cache/

@@ -44,9 +44,9 @@ __version__ = find_version(os.path.join('gwin', '__init__.py'))
 
 # -- dependencies -------------------------------------------------------------
 
-setup_requires = [
-    'setuptools',
-]
+setup_requires = []
+if set(('test',)).intersection(sys.argv):
+    setup_requires.extend(['pytest_runner'])
 
 install_requires = [
     'pycbc',
@@ -65,6 +65,10 @@ extras_require = {
     'kombine': ['kombine'],
     'emcee': ['emcee'],
 }
+
+tests_require = [
+    'pytest>=2.8',
+]
 
 
 # -- files --------------------------------------------------------------------
@@ -100,6 +104,7 @@ setup(
     setup_requires=setup_requires,
     install_requires=install_requires,
     extras_require=extras_require,
+    tests_require=tests_require,
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Programming Language :: Python',
