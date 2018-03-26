@@ -25,8 +25,6 @@
 This modules provides a list of implemented samplers for parameter estimation.
 """
 
-import numpy
-
 from .kombine import KombineSampler
 from .emcee import EmceeEnsembleSampler, EmceePTSampler
 from .mcmc import MCMCSampler
