@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#!/usr/bin/env python
 """ Plots the fraction of injections with their parameter value recovered
 within a credible interval versus credible interval.
 """
