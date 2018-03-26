@@ -49,6 +49,7 @@ if set(('test',)).intersection(sys.argv):
     setup_requires.extend(['pytest_runner'])
 
 install_requires = [
+    'numpy',
     'pycbc',
     'matplotlib',
     'scipy',

@@ -6,6 +6,9 @@ python:
 before_install:
   - pip install pip setuptools --upgrade
 
+  # install pegasus (don't install dependencies, psycopg2==2.6 is broken)
+  - pip install `grep pegasus requirements.txt` --no-deps
+
 install:
   - python -m pip install .
 
@@ -18,9 +21,12 @@ script:
 
   # run --help on all scripts (just to check for missing imports, etc)
   - |
+    set -e
     for EXE in bin/gwin*; do
+        echo "$ `basename $EXE` --help"
         `basename $EXE` --help 1> /dev/null
     done
+    set +e
 
 after_success:
   - coverage report
