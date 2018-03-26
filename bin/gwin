@@ -21,28 +21,20 @@
 import os
 import argparse
 import logging
-import numpy
 import shutil
+
+import numpy
+
 import pycbc
-import pycbc.opt
-import pycbc.weave
 import pycbc.version
-from pycbc import calibration
-from pycbc import distributions
-from pycbc import transforms
-from pycbc import fft
-from pycbc import gate
-import gwin
-from pycbc import psd
-from pycbc import scheme
-from pycbc import strain
-from pycbc import types
-from gwin.io.hdf import InferenceFile, check_integrity
+from pycbc import (calibration, distributions, transforms, fft, gate,
+                   opt, psd, scheme, strain, weave)
 from pycbc.waveform import generator
-from gwin import option_utils
+
+import gwin
+from gwin import (burn_in, option_utils)
+from gwin.io.hdf import InferenceFile
 from gwin.option_utils import validate_checkpoint_files
-from gwin import burn_in
-from pycbc import gate
 
 # command line usage
 parser = argparse.ArgumentParser(usage=__file__ + " [--options]",
@@ -124,11 +116,11 @@ parser.add_argument("--verbose", action="store_true", default=False,
 
 # add module pre-defined options
 fft.insert_fft_option_group(parser)
-pycbc.opt.insert_optimization_option_group(parser)
+opt.insert_optimization_option_group(parser)
 psd.insert_psd_option_group_multi_ifo(parser)
 scheme.insert_processing_option_group(parser)
 strain.insert_strain_option_group_multi_ifo(parser)
-pycbc.weave.insert_weave_option_group(parser)
+weave.insert_weave_option_group(parser)
 gate.add_gate_option_group(parser)
 
 # parse command line
@@ -139,11 +131,11 @@ pycbc.init_logging(opts.verbose)
 
 # verify options are sane
 fft.verify_fft_options(opts, parser)
-pycbc.opt.verify_optimization_options(opts, parser)
+opt.verify_optimization_options(opts, parser)
 #psd.verify_psd_options(opts, parser)
 scheme.verify_processing_options(opts, parser)
 #strain.verify_strain_options(opts, parser)
-pycbc.weave.verify_weave_options(opts, parser)
+weave.verify_weave_options(opts, parser)
 
 # check for the output file
 if os.path.exists(opts.output_file) and not opts.force:

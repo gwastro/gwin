@@ -6,18 +6,19 @@ within a credible interval versus credible interval.
 import sys
 import argparse
 import logging
-import matplotlib as mpl; mpl.use("Agg")
-import matplotlib.colorbar as cbar
-import matplotlib.pyplot as plt
+
 import numpy
-import pycbc
+
 from scipy import stats
-from matplotlib import cm
-from pycbc import inject
-from pycbc import transforms
+
+from matplotlib import use
+use('agg')
+from matplotlib import pyplot as plt
+
+import pycbc
 from pycbc.results import save_fig_with_metadata
+
 from gwin import option_utils
-from pycbc.io.record import FieldArray
 
 # parse command line
 parser = argparse.ArgumentParser(usage=__file__ + " [--options]",

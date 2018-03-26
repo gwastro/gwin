@@ -17,11 +17,13 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 import argparse
-import h5py
 import logging
-import numpy
 import sys
+
+import numpy
+
 from pycbc import results
+
 from gwin import option_utils
 
 # command line usage

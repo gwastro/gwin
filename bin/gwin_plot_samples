@@ -19,15 +19,17 @@
 """
 
 import argparse
-import h5py
 import logging
-import matplotlib as mpl; mpl.use("Agg")
-import matplotlib.pyplot as plt
-import pycbc
-from pycbc import results
-from pycbc import transforms
-from gwin import option_utils
 import sys
+
+from matplotlib import use
+use('agg')
+from matplotlib import pyplot as plt
+
+import pycbc
+from pycbc import (results, transforms)
+
+from gwin import option_utils
 
 # command line usage
 parser = argparse.ArgumentParser(usage=__file__ + " [--options]",

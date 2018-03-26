@@ -16,18 +16,23 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-import matplotlib as mpl; mpl.use("Agg")
-import matplotlib.pyplot as plt
 import argparse
-import corner
 import itertools
 import logging
-import numpy
 import sys
-from pycbc import distributions
-import gwin
-from pycbc import results
+
+import numpy
+
+
+from matplotlib import use
+use('agg')
+from matplotlib import pyplot as plt
+
+import corner
+
+from pycbc import (distributions, results)
 from pycbc.workflow import WorkflowConfigParser
+
 
 def cartesian(arrays):
     """ Returns a cartesian product from a list of iterables.
