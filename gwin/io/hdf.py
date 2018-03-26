@@ -27,15 +27,19 @@ inference samplers generate.
 
 import os
 import sys
-import h5py
-import numpy
 import logging
+
+import numpy
+
+import h5py
+
 from pycbc import DYN_RANGE_FAC
+from pycbc.io import FieldArray
 from pycbc.types import FrequencySeries
 from pycbc.waveform import parameters as wfparams
-import gwin.sampler
-import gwin.likelihood
-from pycbc.io import FieldArray
+
+from .. import sampler as gwin_sampler
+
 
 class _PosteriorOnlyParser(object):
     """Provides interface for reading/writing samples from/to an InferenceFile
@@ -134,7 +138,7 @@ class InferenceFile(h5py.File):
             sampler = self.sampler_name
         except KeyError:
             return None
-        return gwin.sampler.samplers[sampler]
+        return gwin_sampler.samplers[sampler]
 
     @property
     def samples_parser(self):
@@ -165,8 +169,7 @@ class InferenceFile(h5py.File):
         """Returns a dictionary of the static_args. The keys are the argument
         names, values are the value they were set to.
         """
-        return dict([[arg, self.attrs[arg]]
-            for arg in self.attrs["static_args"]])
+        return {args: self.attrs[arg] for arg in self.attrs["static_args"]}
 
     @property
     def sampling_args(self):
@@ -315,8 +318,8 @@ class InferenceFile(h5py.File):
         Parameters
         -----------
         \**kwargs :
-            The keyword args are passed to the sampler's `read_likelihood_stats`
-            method.
+            The keyword args are passed to the sampler's
+            `read_likelihood_stats` method.
 
         Returns
         -------
@@ -381,7 +384,7 @@ class InferenceFile(h5py.File):
                 label = None
         if label is None:
             if error_on_none:
-                raise ValueError("Cannot find a label for paramter %s" %(
+                raise ValueError("Cannot find a label for paramter %s" % (
                     parameter))
             else:
                 return parameter
@@ -425,7 +428,7 @@ class InferenceFile(h5py.File):
             group = subgroup
         else:
             group = '/'.join([group, subgroup])
-        for ifo,strain in strain_dict.items():
+        for ifo, strain in strain_dict.items():
             self[group.format(ifo=ifo)] = strain
             self[group.format(ifo=ifo)].attrs['delta_t'] = strain.delta_t
             self[group.format(ifo=ifo)].attrs['start_time'] = \
@@ -447,7 +450,7 @@ class InferenceFile(h5py.File):
             group = subgroup
         else:
             group = '/'.join([group, subgroup])
-        for ifo,stilde in stilde_dict.items():
+        for ifo, stilde in stilde_dict.items():
             self[group.format(ifo=ifo)] = stilde
             self[group.format(ifo=ifo)].attrs['delta_f'] = stilde.delta_f
             self[group.format(ifo=ifo)].attrs['epoch'] = float(stilde.epoch)
@@ -504,7 +507,7 @@ class InferenceFile(h5py.File):
             # apply dynamic range factor for saving PSDs since
             # plotting code expects it
             psd_dyn_dict = {}
-            for key,val in psd_dict.iteritems():
+            for key, val in psd_dict.iteritems():
                 psd_dyn_dict[key] = FrequencySeries(val*DYN_RANGE_FAC**2,
                                                     delta_f=val.delta_f)
             self.write_psd(psds=psd_dyn_dict,
@@ -665,7 +668,6 @@ class InferenceFile(h5py.File):
         for key in self.attrs.keys():
             other.attrs[key] = self.attrs[key]
 
-
     def copy(self, other, parameters=None, parameter_names=None,
              posterior_only=False, **kwargs):
         """Copies data in this file to another file.
@@ -725,9 +727,9 @@ class InferenceFile(h5py.File):
         logging.info("Copying {} samples".format(samples.size))
         # if different parameter names are desired, get them from the samples
         if parameter_names:
-            arrs = {pname: samples[p] for p,pname in parameter_names.items()}
-            arrs.update({p: samples[p] for p in parameters
-                                        if p not in parameter_names})
+            arrs = {pname: samples[p] for p, pname in parameter_names.items()}
+            arrs.update({p: samples[p] for p in parameters if
+                         p not in parameter_names})
             samples = FieldArray.from_kwargs(**arrs)
             other.attrs['variable_args'] = samples.fieldnames
         logging.info("Writing samples")
@@ -789,8 +791,8 @@ def check_integrity(filename):
         ref_shape = fp[group.format(parameters[0])].shape
         if not all(fp[group.format(param)].shape == ref_shape
                    for param in parameters):
-            raise IOError("not all datasets in the samples group have the same "
-                          "shape")
+            raise IOError("not all datasets in the samples group have the "
+                          "same shape")
         # check that we can read the first/last sample
         firstidx = tuple([0]*len(ref_shape))
         lastidx = tuple([-1]*len(ref_shape))
