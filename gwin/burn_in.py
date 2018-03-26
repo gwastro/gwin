@@ -13,21 +13,15 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-
-#
-# =============================================================================
-#
-#                                   Preamble
-#
-# =============================================================================
-#
 """
 This modules provides classes and functions for determining when Markov Chains
 have burned in.
 """
 
 import numpy
+
 from scipy.stats import ks_2samp
+
 
 def ks_test(sampler, fp):
     """Burn in based on whether the p-value of the KS test between the samples
@@ -52,24 +46,27 @@ def ks_test(sampler, fp):
     """
     nwalkers = fp.nwalkers
     niterations = fp.niterations
-    # Create a dictionary which would have keys are the variable args and values
-    # are booleans indicating whether the p-value for the parameters satisfies
-    # the KS test
+    # Create a dictionary which would have keys are the variable args and
+    # values are booleans indicating whether the p-value for the parameters
+    # satisfies the KS test
     is_burned_in_param = {}
     # iterate over the parameters
     for param in fp.variable_args:
         # read samples for the parameter from the last iteration of the chain
         samples_last_iter = sampler.read_samples(fp, param, iteration=-1,
                                                  flatten=True)[param]
-        # read samples for the parameter from the iteration midway along the chain
-        samples_chain_midpt = sampler.read_samples(fp, param, iteration=int(niterations/2),
-                                                  flatten=True)[param]
+        # read samples for the parameter from the iteration midway
+        # along the chain
+        samples_chain_midpt = sampler.read_samples(
+            fp, param, iteration=int(niterations/2), flatten=True)[param]
         _, p_value = ks_2samp(samples_last_iter, samples_chain_midpt)
         # check if p_value is within the desired range
         is_burned_in_param[param] = 0.1 < p_value < 0.9
-    # The chains are burned in if the p-value of the KS test lies in the range [0.1,0.9]
-    # for all the parameters. If the KS test is passed, the chains have burned in at their
-    # mid-way point. 
+
+    # The chains are burned in if the p-value of the KS test lies
+    # in the range [0.1,0.9] for all the parameters.
+    # If the KS test is passed, the chains have burned in at their
+    # mid-way point.
     if all(is_burned_in_param.values()):
         is_burned_in = numpy.ones(nwalkers, dtype=bool)
         burn_in_idx = numpy.repeat(niterations/2, nwalkers).astype(int)
@@ -77,6 +74,7 @@ def ks_test(sampler, fp):
         is_burned_in = numpy.zeros(nwalkers, dtype=bool)
         burn_in_idx = numpy.repeat(niterations, nwalkers).astype(int)
     return burn_in_idx, is_burned_in
+
 
 def max_posterior(sampler, fp):
     """Burn in based on samples being within dim/2 of maximum posterior.
@@ -100,11 +98,12 @@ def max_posterior(sampler, fp):
     # get the posteriors
     # Note: multi-tempered samplers should just return the coldest chain by
     # default
-    chain_stats = sampler.read_samples(fp, ['loglr', 'prior'],
-        samples_group=fp.stats_group, thin_interval=1, thin_start=0,
-        thin_end=None, flatten=False)
+    chain_stats = sampler.read_samples(
+        fp, ['loglr', 'prior'], samples_group=fp.stats_group,
+        thin_interval=1, thin_start=0, thin_end=None, flatten=False)
     chain_posteriors = chain_stats['loglr'] + chain_stats['prior']
     dim = len(fp.variable_args)
+
     # find the posterior to compare against
     max_p = chain_posteriors.max()
     criteria = max_p - dim/2
@@ -112,10 +111,11 @@ def max_posterior(sampler, fp):
     niterations = chain_posteriors.shape[-1]
     burn_in_idx = numpy.repeat(niterations, nwalkers).astype(int)
     is_burned_in = numpy.zeros(nwalkers, dtype=bool)
+
     # find the first iteration in each chain where the logplr has exceeded
     # max_p - dim/2
     for ii in range(nwalkers):
-        chain = chain_posteriors[...,ii,:]
+        chain = chain_posteriors[..., ii, :]
         # numpy.where will return a tuple with multiple arrays if the chain is
         # more than 1D (which can happen for multi-tempered samplers). Always
         # taking the last array ensures we are looking at the indices that
@@ -150,18 +150,19 @@ def posterior_step(sampler, fp):
     # get the posteriors
     # Note: multi-tempered samplers should just return the coldest chain by
     # default
-    chain_stats = sampler.read_samples(fp, ['loglr', 'prior'],
-        samples_group=fp.stats_group, thin_interval=1, thin_start=0,
-        thin_end=None, flatten=False)
+    chain_stats = sampler.read_samples(
+        fp, ['loglr', 'prior'], samples_group=fp.stats_group,
+        thin_interval=1, thin_start=0, thin_end=None, flatten=False)
     chain_posteriors = chain_stats['loglr'] + chain_stats['prior']
     nwalkers = chain_posteriors.shape[-2]
     dim = len(fp.variable_args)
     burn_in_idx = numpy.zeros(nwalkers).astype(int)
     criteria = dim/2.
+
     # find the last iteration in each chain where the logplr has
     # jumped by more than dim/2
     for ii in range(nwalkers):
-        chain = chain_posteriors[...,ii,:]
+        chain = chain_posteriors[..., ii, :]
         dp = abs(numpy.diff(chain))
         idx = numpy.where(dp >= criteria)[-1]
         if idx.size != 0:
@@ -191,8 +192,10 @@ def half_chain(sampler, fp):
     """
     nwalkers = sampler.nwalkers
     niterations = fp.niterations
-    return numpy.repeat(niterations/2, nwalkers).astype(int), \
-           numpy.ones(nwalkers, dtype=bool)
+    return (
+        numpy.repeat(niterations/2, nwalkers).astype(int),
+        numpy.ones(nwalkers, dtype=bool),
+    )
 
 
 def use_sampler(sampler, fp=None):
@@ -217,8 +220,10 @@ def use_sampler(sampler, fp=None):
         are burned, all values are set to True.
     """
     sampler.burn_in()
-    return sampler.burn_in_iterations, \
-           numpy.ones(len(sampler.burn_in_iterations), dtype=bool)
+    return (
+        sampler.burn_in_iterations,
+        numpy.ones(len(sampler.burn_in_iterations), dtype=bool),
+    )
 
 
 burn_in_functions = {
@@ -228,6 +233,7 @@ burn_in_functions = {
     'half_chain': half_chain,
     'use_sampler': use_sampler,
     }
+
 
 class BurnIn(object):
     """Class to estimate the number of burn in iterations.
