@@ -16,6 +16,12 @@ script:
   # run unit tests
   - coverage run ./setup.py test
 
+  # run --help on all scripts (just to check for missing imports, etc)
+  - |
+    for EXE in bin/gwin*; do
+        `basename $EXE` --help 1> /dev/null
+    done
+
 after_success:
   - coverage report
   - coveralls
