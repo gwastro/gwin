@@ -19,31 +19,27 @@
 
 import logging
 import shutil
-import gwin.sampler
-from pycbc import inject
+
+from pycbc import (conversions, inject, transforms)
+from pycbc.distributions import (bounded, constraints)
 from pycbc.io.record import FieldArray
-from gwin import burn_in
-from pycbc import conversions
-from pycbc import transforms
-from pycbc.distributions import bounded
-from pycbc.distributions import constraints
-from gwin.io.hdf import InferenceFile, check_integrity
-from gwin.io.txt import InferenceTXTFile
-from gwin import likelihood
-from pycbc.workflow import WorkflowConfigParser
-from pycbc.workflow import ConfigParser
+from pycbc.workflow import (ConfigParser, WorkflowConfigParser)
 from pycbc.pool import choose_pool
 from pycbc.psd import from_cli_multi_ifos as psd_from_cli_multi_ifos
 from pycbc.strain import from_cli_multi_ifos as strain_from_cli_multi_ifos
-from pycbc.gate import gates_from_cli, psd_gates_from_cli, apply_gates_to_td, \
-                       apply_gates_to_fd
+from pycbc.gate import (gates_from_cli, psd_gates_from_cli, apply_gates_to_td,
+                        apply_gates_to_fd)
+
+from gwin import (burn_in, likelihood, sampler)
+from gwin.io.hdf import InferenceFile, check_integrity
+from gwin.io.txt import InferenceTXTFile
 
 
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 #
 #                   Utilities for loading config files
 #
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 def convert_liststring_to_list(lstring):
     """Checks if an argument of the configuration file is a string of a list
@@ -55,9 +51,9 @@ def convert_liststring_to_list(lstring):
     the argument does not start and end with '[' and ']', the argument will
     just be returned as is.
     """
-    if lstring[0]=='[' and lstring[-1]==']':
-        lstring = [str(lstring[1:-1].split(',')[n].strip().strip("'"))
-                      for n in range(len(lstring[1:-1].split(',')))]
+    if lstring[0] == '[' and lstring[-1] == ']':
+        lstring = [str(lstring[1:-1].split(',')[n].strip().strip("'")) for
+                   n in range(len(lstring[1:-1].split(',')))]
     return lstring
 
 
@@ -129,13 +125,14 @@ def read_args_from_config(cp, section_group=None, prior_section='prior'):
 
     # get parameters that do not change in sampler
     try:
-        static_args = dict([(key,cp.get_opt_tags(
-            "{}static_args".format(section_prefix), key, []))
-            for key in cp.options("{}static_args".format(section_prefix))])
+        static_args = {
+            key: cp.get_opt_tags(
+                "{}static_args".format(section_prefix), key, [])
+            for key in cp.options("{}static_args".format(section_prefix))}
     except ConfigParser.NoSectionError:
         static_args = {}
     # try converting values to float
-    for key,val in static_args.iteritems():
+    for key, val in static_args.iteritems():
         try:
             # the following will raise a ValueError if it cannot be cast to
             # float (as we would expect for string arguments)
@@ -143,7 +140,7 @@ def read_args_from_config(cp, section_group=None, prior_section='prior'):
         except ValueError:
             # try converting to a list of strings; this function will just
             # return val if it does not begin (end) with [ (])
-            static_args[key] = convert_liststring_to_list(val) 
+            static_args[key] = convert_liststring_to_list(val)
 
     # get additional constraints to apply in prior
     cons = []
@@ -158,7 +155,7 @@ def read_args_from_config(cp, section_group=None, prior_section='prior'):
             val = cp.get_opt_tag(section, key, subsection)
             if key == "required_parameters":
                 kwargs["required_parameters"] = val.split(
-                                                        bounded.VARARGS_DELIM)
+                    bounded.VARARGS_DELIM)
                 continue
             try:
                 val = float(val)
@@ -169,6 +166,7 @@ def read_args_from_config(cp, section_group=None, prior_section='prior'):
                                                   constraint_arg, **kwargs))
 
     return variable_args, static_args, cons
+
 
 def read_sampling_args_from_config(cp, section_group=None,
                                    section='sampling_parameters'):
@@ -219,15 +217,15 @@ def read_sampling_args_from_config(cp, section_group=None,
     for args in cp.options(section):
         map_args = cp.get(section, args)
         sampling_params.update(set(map(str.strip, map_args.split(','))))
-        replaced_params.update(set(map(str.strip, args.split(',')))) 
+        replaced_params.update(set(map(str.strip, args.split(','))))
     return list(sampling_params), list(replaced_params)
 
 
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 #
 #                    Utilities for setting up a sampler
 #
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 def add_sampler_option_group(parser):
     """Adds the options needed to set up an inference sampler.
@@ -237,19 +235,21 @@ def add_sampler_option_group(parser):
     parser : object
         ArgumentParser instance.
     """
-    sampler_group = parser.add_argument_group("Arguments for setting up "
-        "a sampler")
+    sampler_group = parser.add_argument_group(
+        "Arguments for setting up a sampler")
 
     # required options
-    sampler_group.add_argument("--sampler", required=True,
-        choices=gwin.sampler.samplers.keys(),
+    sampler_group.add_argument(
+        "--sampler", required=True, choices=sampler.samplers.keys(),
         help="Sampler class to use for finding posterior.")
-    sampler_group.add_argument("--niterations", type=int,
+    sampler_group.add_argument(
+        "--niterations", type=int,
         help="Number of iterations to perform. If 'use_sampler' is given to "
              "burn-in-function, this will be counted after the sampler's burn "
              "function has run. Otherwise, this is the total number of "
              "iterations, including any burn in.")
-    sampler_group.add_argument("--n-independent-samples", type=int,
+    sampler_group.add_argument(
+        "--n-independent-samples", type=int,
         help="Run the sampler until the specified number of "
              "independent samples is obtained, at minimum. Requires "
              "checkpoint-interval. At each checkpoint the burn-in iteration "
@@ -258,27 +258,33 @@ def add_sampler_option_group(parser):
              "burn-in-iteration and skipping every `ACL`th iteration. "
              "Either this or niteration should be specified (but not both).")
     # sampler-specific options
-    sampler_group.add_argument("--nwalkers", type=int, default=None,
+    sampler_group.add_argument(
+        "--nwalkers", type=int, default=None,
         help="Number of walkers to use in sampler. Required for MCMC "
              "samplers.")
-    sampler_group.add_argument("--ntemps", type=int, default=None,
+    sampler_group.add_argument(
+        "--ntemps", type=int, default=None,
         help="Number of temperatures to use in sampler. Required for parallel "
              "tempered MCMC samplers.")
-    sampler_group.add_argument("--burn-in-function", default=None, nargs='+',
+    sampler_group.add_argument(
+        "--burn-in-function", default=None, nargs='+',
         choices=burn_in.burn_in_functions.keys(),
         help="Use the given function to determine when chains are burned in. "
              "If none provided, no burn in will be estimated. "
              "If multiple functions are provided, will use the maximum "
              "iteration from all functions.")
-    sampler_group.add_argument("--min-burn-in", type=int, default=0,
+    sampler_group.add_argument(
+        "--min-burn-in", type=int, default=0,
         help="Force the burn-in to be at least the given number of "
              "iterations.")
-    sampler_group.add_argument("--skip-burn-in", action="store_true",
+    sampler_group.add_argument(
+        "--skip-burn-in", action="store_true",
         default=False,
         help="DEPRECATED. Turning this option on has no effect; "
              "it will be removed in future versions. If no burn in is "
              "desired, simply do not provide a burn-in-function argument.")
-    sampler_group.add_argument("--update-interval", type=int, default=None,
+    sampler_group.add_argument(
+        "--update-interval", type=int, default=None,
         help="If using kombine, specify the number of steps to take between "
              "proposal updates. Note: for purposes of updating, kombine "
              "counts iterations since the last checkpoint. This interval "
@@ -286,9 +292,11 @@ def add_sampler_option_group(parser):
              "no updates will occur. To ensure that updates happen at equal "
              "intervals, make checkpoint-interval a multiple of "
              "update-interval.")
-    sampler_group.add_argument("--nprocesses", type=int, default=None,
+    sampler_group.add_argument(
+        "--nprocesses", type=int, default=None,
         help="Number of processes to use. If not given then use maximum.")
-    sampler_group.add_argument("--use-mpi", action='store_true', default=False,
+    sampler_group.add_argument(
+        "--use-mpi", action='store_true', default=False,
         help="Use MPI to parallelize the sampler")
     return sampler_group
 
@@ -315,7 +323,7 @@ def sampler_from_cli(opts, likelihood_evaluator, pool=None):
     else:
         likelihood_call = None
 
-    sclass = gwin.sampler.samplers[opts.sampler]
+    sclass = sampler.samplers[opts.sampler]
 
     pool = choose_pool(mpi=opts.use_mpi, processes=opts.nprocesses)
 
@@ -326,11 +334,11 @@ def sampler_from_cli(opts, likelihood_evaluator, pool=None):
                            pool=pool, likelihood_call=likelihood_call)
 
 
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 #
 #                       Utilities for loading data
 #
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 def validate_checkpoint_files(checkpoint_file, backup_file):
     """Checks if the given checkpoint and/or backup files are valid.
@@ -476,8 +484,8 @@ def data_from_cli(opts):
         psd_opts.gps_start_time = psd_opts.psd_start_time
         psd_opts.gps_end_time = psd_opts.psd_end_time
         psd_strain_dict = strain_from_cli_multi_ifos(psd_opts,
-                                                    opts.instruments,
-                                                    precision="double")
+                                                     opts.instruments,
+                                                     precision="double")
         # apply any gates
         logging.info("Applying gates to PSD data")
         psd_strain_dict = apply_gates_to_td(psd_strain_dict, psd_gates)
@@ -486,7 +494,6 @@ def data_from_cli(opts):
         raise ValueError("Must give --psd-start-time and --psd-end-time")
     else:
         psd_strain_dict = strain_dict
-
 
     # FFT strain and save each of the length of the FFT, delta_f, and
     # low frequency cutoff to a dict
@@ -501,9 +508,9 @@ def data_from_cli(opts):
         delta_f_dict[ifo] = stilde_dict[ifo].delta_f
 
     # get PSD as frequency series
-    psd_dict = psd_from_cli_multi_ifos(opts, length_dict, delta_f_dict,
-                               low_frequency_cutoff_dict, opts.instruments,
-                               strain_dict=psd_strain_dict, precision="double")
+    psd_dict = psd_from_cli_multi_ifos(
+        opts, length_dict, delta_f_dict, low_frequency_cutoff_dict,
+        opts.instruments, strain_dict=psd_strain_dict, precision="double")
 
     # apply any gates to overwhitened data, if desired
     if opts.gate_overwhitened and opts.gate is not None:
@@ -519,12 +526,11 @@ def data_from_cli(opts):
     return strain_dict, stilde_dict, psd_dict
 
 
-
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 #
 #                Utilities for loading and plotting results
 #
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 def add_inference_results_option_group(parser, include_parameters_group=True):
     """Adds the options used to call gwin.results_from_cli function
@@ -540,15 +546,15 @@ def add_inference_results_option_group(parser, include_parameters_group=True):
         If true then include `--parameters-group` option.
     """
 
-    results_reading_group = parser.add_argument_group("Arguments for loading "
-        "inference results")
+    results_reading_group = parser.add_argument_group(
+        "Arguments for loading inference results")
 
     # required options
     results_reading_group.add_argument(
         "--input-file", type=str, required=True, nargs="+",
         help="Path to input HDF files.")
-    results_reading_group.add_argument("--parameters", type=str, nargs="+",
-        metavar="PARAM[:LABEL]",
+    results_reading_group.add_argument(
+        "--parameters", type=str, nargs="+", metavar="PARAM[:LABEL]",
         help="Name of parameters to load. If none provided will load all of "
              "the variable args in the input-file. If provided, the "
              "parameters can be any of the variable args or posteriors in "
@@ -562,17 +568,20 @@ def add_inference_results_option_group(parser, include_parameters_group=True):
              "place, will just use the parameter.")
 
     # optionals
-    results_reading_group.add_argument("--thin-start", type=int, default=None,
+    results_reading_group.add_argument(
+        "--thin-start", type=int, default=None,
         help="Sample number to start collecting samples to plot. If none "
              "provided, will start at the end of the burn-in.")
-    results_reading_group.add_argument("--thin-interval", type=int,
-        default=None,
+    results_reading_group.add_argument(
+        "--thin-interval", type=int, default=None,
         help="Interval to use for thinning samples. If none provided, will "
              "use the auto-correlation length found in the file.")
-    results_reading_group.add_argument("--thin-end", type=int, default=None,
+    results_reading_group.add_argument(
+        "--thin-end", type=int, default=None,
         help="Sample number to stop collecting samples to plot. If none "
              "provided, will stop at the last sample from the sampler.")
-    results_reading_group.add_argument("--iteration", type=int, default=None,
+    results_reading_group.add_argument(
+        "--iteration", type=int, default=None,
         help="Only retrieve the given iteration. To load the last n-th sampe "
              "use -n, e.g., -1 will load the last iteration. This overrides "
              "the thin-start/interval/end options.")
@@ -605,7 +614,7 @@ def parse_parameters_opt(parameters):
         return None, {}
     # load the labels
     labels = {}
-    for ii,p in enumerate(parameters):
+    for ii, p in enumerate(parameters):
         if len(p.split(':')) == 2:
             p, label = p.split(':')
             parameters[ii] = p
@@ -665,8 +674,8 @@ def results_from_cli(opts, load_samples=True, **kwargs):
         fp = InferenceFile(input_file, "r")
 
         # get parameters and a dict of labels for each parameter
-        parameters = fp.variable_args if opts.parameters is None \
-                         else opts.parameters
+        parameters = (fp.variable_args if opts.parameters is None
+                      else opts.parameters)
         parameters, ldict = parse_parameters_opt(parameters)
 
         # convert labels dict to list
@@ -684,7 +693,7 @@ def results_from_cli(opts, load_samples=True, **kwargs):
 
             # check if need extra parameters for a non-sampling parameter
             file_parameters, ts = transforms.get_common_cbc_transforms(
-                                                 parameters, fp.variable_args)
+                parameters, fp.variable_args)
 
             # read samples from file
             samples = fp.read_samples(
@@ -716,6 +725,7 @@ def results_from_cli(opts, load_samples=True, **kwargs):
 
     return fp_all, parameters_all, labels_all, samples_all
 
+
 def get_file_type(filename):
     """ Returns I/O object to use for file.
 
@@ -738,6 +748,7 @@ def get_file_type(filename):
         if filename.endswith(ext):
             return InferenceTXTFile
     raise TypeError("Extension is not supported.")
+
 
 def get_zvalues(fp, arg, likelihood_stats):
     """Reads the data for the z-value of the plots from the inference file.
@@ -791,7 +802,7 @@ def add_plot_posterior_option_group(parser):
         ArgumentParser instance.
     """
     pgroup = parser.add_argument_group("Options for what plots to create and "
-                                         "their formats.")
+                                       "their formats.")
     pgroup.add_argument('--plot-marginal', action='store_true', default=False,
                         help="Plot 1D marginalized distributions on the "
                              "diagonal axes.")
@@ -825,7 +836,8 @@ def add_plot_posterior_option_group(parser):
                         help="Same as mins, but for the maximum values to "
                              "plot.")
     # add expected parameters options
-    pgroup.add_argument('--expected-parameters', nargs='+', metavar='PARAM:VAL',
+    pgroup.add_argument('--expected-parameters', nargs='+',
+                        metavar='PARAM:VAL',
                         default=[],
                         help="Specify expected parameter values to plot. If "
                              "provided, a cross will be plotted in each axis "
@@ -911,8 +923,10 @@ def injections_from_cli(opts):
     # loop over all input files getting the injection files
     for input_file in input_files:
         # read injections from HDF input file as FieldArray
-        these_injs = inject.InjectionSet(input_file,
-            hdf_group=opts.injection_hdf_group).table.view(FieldArray)
+        these_injs = inject.InjectionSet(
+            input_file,
+            hdf_group=opts.injection_hdf_group,
+        ).table.view(FieldArray)
         if injections is None:
             injections = these_injs
         else:
@@ -962,22 +976,22 @@ def add_scatter_option_group(parser):
     scatter_group = parser.add_argument_group("Options for configuring the "
                                               "scatter plot.")
 
-    scatter_group.add_argument('--z-arg', type=str, default=None,
-                    choices=['loglr', 'snr', 'logplr', 'logposterior',
-                             'prior'],
-                    help='What to color the scatter points by. If not set, '
-                         'all points will be the same color. Choices are: '
-                         'loglr: the log likelihood ratio; snr: SNR; '
-                         'logplr: loglr + log of the prior; '
-                         'logposterior: log likelihood function + log prior; '
-                         'prior: the log of the prior.')
-    scatter_group.add_argument("--vmin", type=float,
-                    help="Minimum value for the colorbar.")
-    scatter_group.add_argument("--vmax", type=float,
-                    help="Maximum value for the colorbar.")
-    scatter_group.add_argument("--scatter-cmap", type=str, default='plasma',
-                    help="Specify the colormap to use for points. Default is "
-                         "plasma.")
+    scatter_group.add_argument(
+        '--z-arg', type=str, default=None,
+        choices=['loglr', 'snr', 'logplr', 'logposterior', 'prior'],
+        help='What to color the scatter points by. If not set, '
+             'all points will be the same color. Choices are: '
+             'loglr: the log likelihood ratio; snr: SNR; '
+             'logplr: loglr + log of the prior; '
+             'logposterior: log likelihood function + log prior; '
+             'prior: the log of the prior.')
+    scatter_group.add_argument(
+        "--vmin", type=float, help="Minimum value for the colorbar.")
+    scatter_group.add_argument(
+        "--vmax", type=float, help="Maximum value for the colorbar.")
+    scatter_group.add_argument(
+        "--scatter-cmap", type=str, default='plasma',
+        help="Specify the colormap to use for points. Default is plasma.")
 
     return scatter_group
 
@@ -991,18 +1005,19 @@ def add_density_option_group(parser):
         ArgumentParser instance.
     """
     density_group = parser.add_argument_group("Options for configuring the "
-                                          "contours and density color map")
+                                              "contours and density color map")
 
-    density_group.add_argument("--density-cmap", type=str, default='viridis',
-                    help="Specify the colormap to use for the density. "
-                         "Default is viridis.")
-    density_group.add_argument("--contour-color", type=str, default=None,
-                    help="Specify the color to use for the contour lines. "
-                         "Default is white for density plots and black "
-                         "for scatter plots.")
-    density_group.add_argument('--use-kombine-kde', default=False,
-                    action="store_true",
-                    help="Use kombine's KDE for determining contours. Default "
-                         "is to use scipy's gaussian_kde.")
+    density_group.add_argument(
+        "--density-cmap", type=str, default='viridis',
+        help="Specify the colormap to use for the density. "
+             "Default is viridis.")
+    density_group.add_argument(
+        "--contour-color", type=str, default=None,
+        help="Specify the color to use for the contour lines. Default is "
+             "white for density plots and black for scatter plots.")
+    density_group.add_argument(
+        '--use-kombine-kde', default=False, action="store_true",
+        help="Use kombine's KDE for determining contours. "
+             "Default is to use scipy's gaussian_kde.")
 
     return density_group
