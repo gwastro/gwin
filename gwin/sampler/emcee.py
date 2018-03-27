@@ -34,6 +34,7 @@ from pycbc.filter import autocorrelation
 
 from .base import BaseMCMCSampler, _check_fileformat
 
+
 #
 # =============================================================================
 #
@@ -148,7 +149,7 @@ class EmceeEnsembleSampler(BaseMCMCSampler):
         # generator is set to numpy's after the distributions' rvs functions
         # are called
         super(EmceeEnsembleSampler, self).set_p0(samples_file=samples_file,
-            prior=prior)
+                                                 prior=prior)
         # update the random state
         self._sampler.random_state = numpy.random.get_state()
 
@@ -223,6 +224,7 @@ class EmceeEnsembleSampler(BaseMCMCSampler):
         self.write_acceptance_fraction(fp)
         self.write_state(fp)
 
+
 # This is needed for two reason
 # 1) pools freeze state when created and so classes *cannot be updated*
 # 2) methods cannot be pickled.
@@ -235,6 +237,7 @@ class _callprior(object):
     def __call__(self, args):
         prior = self.callable(args, callfunc='prior')
         return prior if isinstance(prior, numpy.float64) else prior[0]
+
 
 class _callloglikelihood(object):
     """Calls the likelihood function's loglikelihood function.
@@ -386,7 +389,8 @@ class EmceePTSampler(BaseMCMCSampler):
         # if samples are given then use those as initial positions
         if samples_file is not None:
             samples = self.read_samples(samples_file, self.variable_args,
-                iteration=-1, temps='all', flatten=False)[..., 0]
+                                        iteration=-1, temps='all',
+                                        flatten=False)[..., 0]
             # transform to sampling parameter space
             samples = self.likelihood_evaluator.apply_sampling_transforms(
                 samples)
@@ -503,7 +507,7 @@ class EmceePTSampler(BaseMCMCSampler):
 
     @staticmethod
     def write_samples_group(fp, samples_group, parameters, samples,
-                             start_iteration=None, max_iterations=None):
+                            start_iteration=None, max_iterations=None):
         """Writes samples to the given file.
 
         Results are written to:
@@ -561,7 +565,7 @@ class EmceePTSampler(BaseMCMCSampler):
                 fp.create_dataset(dataset_name, (ntemps, nwalkers, istop),
                                   maxshape=(ntemps, nwalkers, max_iterations),
                                   dtype=float, fletcher32=True)
-            fp[dataset_name][:,:,istart:istop] = samples[param]
+            fp[dataset_name][:, :, istart:istop] = samples[param]
 
     def write_results(self, fp, start_iteration=None, max_iterations=None,
                       **metadata):
@@ -595,8 +599,9 @@ class EmceePTSampler(BaseMCMCSampler):
 
     @staticmethod
     def _read_oldstyle_fields(fp, fields_group, fields, array_class,
-                     thin_start=None, thin_interval=None, thin_end=None,
-                     iteration=None, temps=None, walkers=None, flatten=True):
+                              thin_start=None, thin_interval=None,
+                              thin_end=None, iteration=None, temps=None,
+                              walkers=None, flatten=True):
         """Base function for reading samples and likelihood stats. See
         `read_samples` and `read_likelihood_stats` for details.
 
@@ -660,7 +665,6 @@ class EmceePTSampler(BaseMCMCSampler):
                 these_arrays = these_arrays.flatten()
             arrays[name] = these_arrays
         return array_class.from_kwargs(**arrays)
-
 
     @staticmethod
     def _read_fields(fp, fields_group, fields, array_class,
@@ -887,7 +891,7 @@ class EmceePTSampler(BaseMCMCSampler):
                                                end_index=end_index,
                                                per_walker=False, walkers=ii,
                                                parameters=param,
-                                               temps=tk)[param][0,:]
+                                               temps=tk)[param][0, :]
                               for ii in walkers]
                     # we'll stack all of the walker arrays to make a single
                     # nwalkers x niterations array; when these are stacked
@@ -902,7 +906,7 @@ class EmceePTSampler(BaseMCMCSampler):
                                                flatten=False)[param]
                     # contract the walker dimension using the mean, and flatten
                     # the (length 1) temp dimension
-                    samples = samples.mean(axis=1)[0,:]
+                    samples = samples.mean(axis=1)[0, :]
                     thisacf = autocorrelation.calculate_acf(samples).numpy()
                     subacfs.append(thisacf)
             # stack the temperatures
@@ -913,7 +917,7 @@ class EmceePTSampler(BaseMCMCSampler):
                 nw, ni = subacfs[0].shape
                 acfs[param] = numpy.zeros((len(temps), nw, ni), dtype=float)
                 for tk in range(len(temps)):
-                    acfs[param][tk,...] = subacfs[tk]
+                    acfs[param][tk, ...] = subacfs[tk]
             else:
                 acfs[param] = numpy.vstack(subacfs)
         return FieldArray.from_kwargs(**acfs)
@@ -957,7 +961,7 @@ class EmceePTSampler(BaseMCMCSampler):
                                            temps=tk, flatten=False)[param]
                 # contract the walker dimension using the mean, and flatten
                 # the (length 1) temp dimension
-                samples = samples.mean(axis=1)[0,:]
+                samples = samples.mean(axis=1)[0, :]
                 acl = autocorrelation.calculate_acl(samples)
                 if numpy.isinf(acl):
                     acl = samples.size
