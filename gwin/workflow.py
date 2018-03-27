@@ -28,8 +28,8 @@ from pycbc.workflow import pegasus_workflow as wdax
 
 
 def setup_foreground_inference(workflow, coinc_file, single_triggers,
-                       tmpltbank_file, insp_segs, insp_data_name,
-                       insp_anal_name, dax_output, out_dir, tags=None):
+                               tmpltbank_file, insp_segs, insp_data_name,
+                               insp_anal_name, dax_output, out_dir, tags=None):
     """ Creates workflow node that will run the inference workflow.
 
     Parameters
@@ -60,9 +60,10 @@ def setup_foreground_inference(workflow, coinc_file, single_triggers,
 
     logging.info("Entering inference module")
 
-    # check if configuration file has inference section    
+    # check if configuration file has inference section
     if not workflow.cp.has_section("workflow-inference"):
-        logging.info("There is no [workflow-inference] section in configuration file")
+        logging.info("There is no [workflow-inference] section in "
+                     "configuration file")
         logging.info("Leaving inference module")
         return
 
@@ -71,10 +72,10 @@ def setup_foreground_inference(workflow, coinc_file, single_triggers,
 
     # make the directory that will contain the dax file
     makedir(dax_output)
-    
+
     # turn the config file into a File class
-    config_path = os.path.abspath(dax_output + "/" + "_".join(tags) \
-                                        + "foreground_gwin.ini")
+    config_path = os.path.abspath(dax_output + "/" + "_".join(tags) +
+                                  "foreground_gwin.ini")
     workflow.cp.write(open(config_path, "w"))
     config_file = wdax.File(os.path.basename(config_path))
     config_file.PFN(config_path, "local")
@@ -91,9 +92,9 @@ def setup_foreground_inference(workflow, coinc_file, single_triggers,
     node.add_multiifo_input_list_opt("--single-detector-triggers",
                                      single_triggers)
     node.new_output_file_opt(workflow.analysis_time, ".dax", "--output-file",
-                                     tags=tags)
+                             tags=tags)
     node.new_output_file_opt(workflow.analysis_time, ".dax.map",
-                                     "--output-map", tags=tags)
+                             "--output-map", tags=tags)
 
     # get dax name and use it for the workflow name
     name = node.output_files[0].name
@@ -110,7 +111,8 @@ def setup_foreground_inference(workflow, coinc_file, single_triggers,
     # and add it to the workflow
     fil = node.output_files[0]
     job = dax.DAX(fil)
-    job.addArguments("--basename %s" % os.path.splitext(os.path.basename(name))[0])
+    job.addArguments(
+        "--basename %s" % os.path.splitext(os.path.basename(name))[0])
     Workflow.set_job_properties(job, map_file)
     workflow._adag.addJob(job)
 
@@ -120,9 +122,10 @@ def setup_foreground_inference(workflow, coinc_file, single_triggers,
 
     logging.info("Leaving inference module")
 
+
 def make_inference_prior_plot(workflow, config_file, output_dir,
-                    sections=None, name="inference_prior",
-                    analysis_seg=None, tags=None):
+                              sections=None, name="inference_prior",
+                              analysis_seg=None, tags=None):
     """ Sets up the corner plot of the priors in the workflow.
 
     Parameters
@@ -147,21 +150,21 @@ def make_inference_prior_plot(workflow, config_file, output_dir,
     Returns
     -------
     pycbc.workflow.FileList
-        A list of result and output files. 
+        A list of result and output files.
     """
 
     # default values
     tags = [] if tags is None else tags
-    analysis_seg = workflow.analysis_time \
-                       if analysis_seg is None else analysis_seg
+    analysis_seg = (workflow.analysis_time if analysis_seg is None else
+                    analysis_seg)
 
     # make the directory that will contain the output files
     makedir(output_dir)
 
     # make a node for plotting the posterior as a corner plot
     node = PlotExecutable(workflow.cp, name, ifos=workflow.ifos,
-                      out_dir=output_dir, universe="local",
-                      tags=tags).create_node()
+                          out_dir=output_dir, universe="local",
+                          tags=tags).create_node()
 
     # add command line options
     node.add_input_opt("--config-file", config_file)
@@ -175,8 +178,8 @@ def make_inference_prior_plot(workflow, config_file, output_dir,
     return node.output_files
 
 def make_inference_summary_table(workflow, inference_file, output_dir,
-                    variable_args=None, name="inference_table",
-                    analysis_seg=None, tags=None):
+                                 variable_args=None, name="inference_table",
+                                 analysis_seg=None, tags=None):
     """ Sets up the corner plot of the posteriors in the workflow.
 
     Parameters
@@ -201,20 +204,20 @@ def make_inference_summary_table(workflow, inference_file, output_dir,
     Returns
     -------
     pycbc.workflow.FileList
-        A list of result and output files. 
+        A list of result and output files.
     """
 
     # default values
     tags = [] if tags is None else tags
-    analysis_seg = workflow.analysis_time \
-                       if analysis_seg is None else analysis_seg
+    analysis_seg = (workflow.analysis_time if analysis_seg is None else
+                    analysis_seg)
 
     # make the directory that will contain the output files
     makedir(output_dir)
 
     # make a node for plotting the posterior as a corner plot
     node = PlotExecutable(workflow.cp, name, ifos=workflow.ifos,
-                      out_dir=output_dir, tags=tags).create_node()
+                          out_dir=output_dir, tags=tags).create_node()
 
     # add command line options
     node.add_input_opt("--input-file", inference_file)
@@ -225,6 +228,7 @@ def make_inference_summary_table(workflow, inference_file, output_dir,
     workflow += node
 
     return node.output_files
+
 
 def make_inference_posterior_plot(
                     workflow, inference_file, output_dir, parameters=None,
@@ -253,21 +257,21 @@ def make_inference_posterior_plot(
     Returns
     -------
     pycbc.workflow.FileList
-        A list of result and output files. 
+        A list of result and output files.
     """
 
     # default values
     tags = [] if tags is None else tags
-    analysis_seg = workflow.analysis_time \
-                       if analysis_seg is None else analysis_seg
+    analysis_seg = (workflow.analysis_time if analysis_seg is None else
+                    analysis_seg)
 
     # make the directory that will contain the output files
     makedir(output_dir)
 
     # make a node for plotting the posterior as a corner plot
     node = PlotExecutable(workflow.cp, name, ifos=workflow.ifos,
-                      out_dir=output_dir, universe="local",
-                      tags=tags).create_node()
+                          out_dir=output_dir, universe="local",
+                          tags=tags).create_node()
 
     # add command line options
     node.add_input_opt("--input-file", inference_file)
@@ -279,6 +283,7 @@ def make_inference_posterior_plot(
     workflow += node
 
     return node.output_files
+
 
 def make_inference_1d_posterior_plots(
                     workflow, inference_file, output_dir, parameters=None,
@@ -292,21 +297,22 @@ def make_inference_1d_posterior_plots(
                     tags=tags + [parameter])
     return files
 
-def make_inference_samples_plot(
-                    workflow, inference_file, output_dir, parameters=None,
-                    name="inference_samples", analysis_seg=None, tags=None):
+
+def make_inference_samples_plot(workflow, inference_file, output_dir,
+                                parameters=None, name="inference_samples",
+                                analysis_seg=None, tags=None):
     # default values
     tags = [] if tags is None else tags
-    analysis_seg = workflow.analysis_time \
-                       if analysis_seg is None else analysis_seg
+    analysis_seg = (workflow.analysis_time if analysis_seg is None else
+                    analysis_seg)
 
     # make the directory that will contain the output files
     makedir(output_dir)
 
     # make a node for plotting the posterior as a corner plot
     node = PlotExecutable(workflow.cp, name, ifos=workflow.ifos,
-                      out_dir=output_dir, universe="local",
-                      tags=tags).create_node()
+                          out_dir=output_dir, universe="local",
+                          tags=tags).create_node()
 
     # add command line options
     node.add_input_opt("--input-file", inference_file)
@@ -320,7 +326,8 @@ def make_inference_samples_plot(
 
 
 def make_inference_acceptance_rate_plot(workflow, inference_file, output_dir,
-                    name="inference_rate", analysis_seg=None, tags=None):
+                                        name="inference_rate",
+                                        analysis_seg=None, tags=None):
     """ Sets up the acceptance rate plot in the workflow.
 
     Parameters
@@ -343,20 +350,20 @@ def make_inference_acceptance_rate_plot(workflow, inference_file, output_dir,
     Returns
     -------
     pycbc.workflow.FileList
-        A list of result and output files. 
+        A list of result and output files.
     """
 
     # default values
     tags = [] if tags is None else tags
-    analysis_seg = workflow.analysis_time \
-                       if analysis_seg is None else analysis_seg
+    analysis_seg = (workflow.analysis_time if analysis_seg is None else
+                    analysis_seg)
 
     # make the directory that will contain the output files
     makedir(output_dir)
 
     # make a node for plotting the acceptance rate
     node = PlotExecutable(workflow.cp, name, ifos=workflow.ifos,
-                      out_dir=output_dir, tags=tags).create_node()
+                          out_dir=output_dir, tags=tags).create_node()
 
     # add command line options
     node.add_input_opt("--input-file", inference_file)
@@ -366,6 +373,7 @@ def make_inference_acceptance_rate_plot(workflow, inference_file, output_dir,
     workflow += node
 
     return node.output_files
+
 
 def make_inference_inj_plots(workflow, inference_files, output_dir,
                              parameters, name="inference_recovery",
@@ -394,13 +402,13 @@ def make_inference_inj_plots(workflow, inference_files, output_dir,
     Returns
     -------
     pycbc.workflow.FileList
-        A list of result and output files. 
+        A list of result and output files.
     """
 
     # default values
     tags = [] if tags is None else tags
-    analysis_seg = workflow.analysis_time \
-                       if analysis_seg is None else analysis_seg
+    analysis_seg = (workflow.analysis_time if analysis_seg is None else
+                    analysis_seg)
     output_files = FileList([])
 
     # make the directory that will contain the output files
