@@ -1,4 +1,4 @@
-#! /usr/bin/env bash
+#!/bin/bash
 set -e
 export OMP_NUM_THREADS=1
 `which gwin` $*

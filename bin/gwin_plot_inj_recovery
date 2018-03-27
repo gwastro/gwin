@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#!/usr/bin/env python
 """ Plots the recovered versus injected parameter values from a population
 of injections.
 """
