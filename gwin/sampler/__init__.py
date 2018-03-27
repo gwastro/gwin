@@ -13,26 +13,18 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-
-#
-# =============================================================================
-#
-#                                   Preamble
-#
-# =============================================================================
-#
 """
 This modules provides a list of implemented samplers for parameter estimation.
 """
 
 from .kombine import KombineSampler
-from .emcee import EmceeEnsembleSampler, EmceePTSampler
+from .emcee import (EmceeEnsembleSampler, EmceePTSampler)
 from .mcmc import MCMCSampler
 
 # list of available samplers
-samplers = {
-    KombineSampler.name : KombineSampler,
-    EmceeEnsembleSampler.name : EmceeEnsembleSampler,
-    EmceePTSampler.name : EmceePTSampler,
-    MCMCSampler.name : MCMCSampler,
-}
+samplers = {cls.name: cls for cls in (
+    KombineSampler,
+    EmceeEnsembleSampler,
+    EmceePTSampler,
+    MCMCSampler,
+)}
