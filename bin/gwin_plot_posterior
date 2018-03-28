@@ -28,17 +28,20 @@
 import argparse
 import itertools
 import logging
+import sys
+
 import numpy
-import matplotlib; matplotlib.use("agg")
+
+from matplotlib import (patches, use)
+
 import pycbc
 import pycbc.version
-import sys
-from matplotlib import patches
-from matplotlib import pyplot
-from gwin import option_utils, likelihood
-from gwin.io.hdf import InferenceFile
 from pycbc.results import metadata
 from pycbc.results.scatter_histograms import create_multidim_plot
+
+from gwin import option_utils
+
+use('agg')
 
 # add options to command line
 parser = argparse.ArgumentParser()

@@ -30,9 +30,11 @@ InferenceFile.
 
 import os
 import argparse
-import logging
+
 import numpy
+
 import pycbc
+
 from gwin import option_utils
 from gwin.io.hdf import InferenceFile
 from gwin.io.txt import InferenceTXTFile

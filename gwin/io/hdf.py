@@ -795,5 +795,5 @@ def check_integrity(filename):
         firstidx = tuple([0]*len(ref_shape))
         lastidx = tuple([-1]*len(ref_shape))
         for param in parameters:
-            _ = fp[group.format(param)][firstidx]
-            _ = fp[group.format(param)][lastidx]
+            fp[group.format(param)][firstidx]
+            fp[group.format(param)][lastidx]

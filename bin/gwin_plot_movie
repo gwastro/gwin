@@ -27,20 +27,24 @@
 
 import argparse
 import logging
-import numpy
 import subprocess
 import os
 import glob
-import matplotlib
-matplotlib.use('agg')
-from matplotlib import pyplot
 from multiprocessing import Pool
+
+import numpy
+
+from matplotlib import use
+use('agg')
+from matplotlib import pyplot
+
 import pycbc.results
 from pycbc import transforms
+
 from gwin import option_utils
-from gwin.io.hdf import InferenceFile
-from pycbc.results.scatter_histograms import create_multidim_plot, \
-    get_scale_fac
+from gwin.results.scatter_histograms import (create_multidim_plot,
+                                             get_scale_fac)
+
 
 def integer_logspace(start, end, num):
     """Generates a list of integers that are spaced approximately uniformly

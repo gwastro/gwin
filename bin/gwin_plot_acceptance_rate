@@ -17,12 +17,15 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 import argparse
-import h5py
 import logging
-import matplotlib as mpl; mpl.use("Agg")
-import matplotlib.pyplot as plt
 import sys
+
+from matplotlib import use
+use('agg')
+from matplotlib import pyplot as plt
+
 from pycbc import results
+
 from gwin.io.hdf import InferenceFile
 
 # command line usage

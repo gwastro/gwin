@@ -17,13 +17,15 @@
 Module that contains functions for setting up the inference workflow.
 """
 
-import logging, os.path
-from pycbc.workflow.core import Executable, FileList, Node, makedir, File, Workflow
-from pycbc.workflow.plotting import PlotExecutable, requirestr, excludestr
-from pycbc.workflow import WorkflowConfigParser
-from itertools import izip_longest
+import logging
+import os.path
+
 from Pegasus import DAX3 as dax
+
+from pycbc.workflow.core import (Executable, FileList, makedir, Workflow)
+from pycbc.workflow.plotting import PlotExecutable
 from pycbc.workflow import pegasus_workflow as wdax
+
 
 def setup_foreground_inference(workflow, coinc_file, single_triggers,
                        tmpltbank_file, insp_segs, insp_data_name,
