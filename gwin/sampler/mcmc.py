@@ -21,6 +21,7 @@
 #
 # =============================================================================
 #
+
 """
 This modules provides classes and functions for using a MCMC sampler
 for parameter estimation.
@@ -30,6 +31,7 @@ import numpy
 import logging
 
 from .base import BaseMCMCSampler
+
 
 #
 # =============================================================================
@@ -52,22 +54,22 @@ class MCMCSampler(BaseMCMCSampler):
     def __init__(self, likelihood_evaluator):
         self._chain = []
         self._blobs = []
-        # Using p0 to store the last sample would require to store sparately the
-        # last posterior value.
+        # Using p0 to store the last sample would require to store separately
+        # the last posterior value.
         self._lastsample = []
         self._lastblob = []
         sampler = self
         # initialize
-        super(MCMCSampler, self).__init__(
-              sampler, likelihood_evaluator)
-        self.dtype=numpy.dtype([(name, None) for name in
-                                            ('lnpost',)+self.sampling_args])
+        super(MCMCSampler, self).__init__(sampler, likelihood_evaluator)
+        self.dtype = numpy.dtype([(name, None) for name in
+                                  ('lnpost',) + self.sampling_args])
         # Harcoding the number of walkers to 1.
         # nwalkers should not be a BaseMCMCSampler property.
         self._nwalkers = 1
 
     @classmethod
-    def from_cli(cls, opts, likelihood_evaluator, pool=None, likelihood_call=None):
+    def from_cli(cls, opts, likelihood_evaluator, pool=None,
+                 likelihood_call=None):
         """Create an instance of this sampler from the given command-line
         options.
 
@@ -93,9 +95,9 @@ class MCMCSampler(BaseMCMCSampler):
         additional dimensions are any additional dimensions used by the
         sampler (e.g, walkers, temperatures).
         """
-        #Adding the nwalkers dimention, and converting to an ndarray.
+        # Adding the nwalkers dimention, and converting to an ndarray.
         return self._chain[list(self.sampling_args)].view(numpy.float).reshape(
-                                            (1,) + self._chain.shape + (-1,))
+            (1,) + self._chain.shape + (-1,))
         # Copy needed to avoid numpy 1.13 warning
 
     @property
@@ -103,7 +105,7 @@ class MCMCSampler(BaseMCMCSampler):
         """This function should return the blobs with a shape
         nwalkers x niteration as requested by the BaseMCMCSampler class.
         """
-        #Adding the nwalkers dimention.
+        # Adding the nwalkers dimention.
         return [self._blobs]
 
     def clear_chain(self):
@@ -153,15 +155,15 @@ class MCMCSampler(BaseMCMCSampler):
 
             logging.info("Starting logplr value %f", logplr)
 
-            start_sample = numpy.insert(self.p0,0,logplr)
+            start_sample = numpy.insert(self.p0, 0, logplr)
             start = 0
 
         else:
             start_sample = self._lastsample
-            start = -1 # So restarts do not re-write the same sample.
+            start = -1  # So restarts do not re-write the same sample.
             blob = self._lastblob
 
-        self._chain = numpy.empty(niterations,dtype=self.dtype)
+        self._chain = numpy.empty(niterations, dtype=self.dtype)
         # numpy >=1.14 only accepts tuples
         self._chain[start] = tuple(start_sample)
         self._blobs = [None]*niterations
@@ -187,18 +189,18 @@ class MCMCSampler(BaseMCMCSampler):
                 logplr_prop = result
                 blob = None
 
-            acceptance_ratio=numpy.exp(logplr_prop - logplr_old)
-            u=numpy.random.uniform()
+            acceptance_ratio = numpy.exp(logplr_prop - logplr_old)
+            u = numpy.random.uniform()
             if acceptance_ratio >= u:
-                self._chain[i+1]=numpy.insert(samples_prop,0,logplr_prop)
-                self._blobs[i+1]=blob
+                self._chain[i+1] = numpy.insert(samples_prop, 0, logplr_prop)
+                self._blobs[i+1] = blob
                 logging.info("Step %i, acceptance ratio %f >= %f, accepted",
-                                        i+1, acceptance_ratio, u)
+                             i+1, acceptance_ratio, u)
             else:
-                self._chain[i+1]=self._chain[i]
-                self._blobs[i+1]=self._blobs[i]
+                self._chain[i+1] = self._chain[i]
+                self._blobs[i+1] = self._blobs[i]
                 logging.info("Step %i, acceptance ratio %f < %f, rejected",
-                                        i+1, acceptance_ratio, u)
+                             i+1, acceptance_ratio, u)
 
         self._lastsample = self._chain[-1]
         self._lastblob = self._blobs[-1]

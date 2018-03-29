@@ -21,25 +21,28 @@
 #
 # =============================================================================
 #
+
 """
 This modules provides classes and functions for evaluating the log likelihood
 for parameter estimation.
 """
 
-from pycbc import conversions
-from pycbc import filter
-import pycbc.transforms
+import numpy
+
+from scipy import (stats, special)
+
+from pycbc import (conversions, filter, transforms)
 from pycbc.waveform import NoWaveformError
 from pycbc.types import Array
 from pycbc.io import FieldArray
-import numpy
-from scipy import stats
-from scipy import special
 
 # Used to manage a likelihood instance across multiple cores or MPI
 _global_instance = None
+
+
 def _call_global_likelihood(*args, **kwds):
     return _global_instance(*args, **kwds) # pylint:disable=not-callable
+
 
 class _NoPrior(object):
     """Dummy class to just return 0 if no prior is provided in a
@@ -51,6 +54,7 @@ class _NoPrior(object):
 
     def __call__(self, **params):
         return 0.
+
 
 class BaseLikelihoodEvaluator(object):
     r"""Base container class for generating waveforms, storing the data, and
@@ -175,7 +179,7 @@ class BaseLikelihoodEvaluator(object):
                  sampling_parameters=None, replace_parameters=None,
                  sampling_transforms=None, waveform_transforms=None,
                  return_meta=True):
-        if isinstance(variable_args, str) or isinstance(variable_args, unicode):
+        if isinstance(variable_args, basestring):
             variable_args = (variable_args,)
         if not isinstance(variable_args, tuple):
             variable_args = tuple(variable_args)
@@ -195,7 +199,7 @@ class BaseLikelihoodEvaluator(object):
             # as the waveform generator
             if prior.variable_args != variable_args:
                 raise ValueError("variable args of prior and waveform "
-                    "generator do not match")
+                                 "generator do not match")
             self._prior = prior
         # initialize the log nl to None
         self._lognl = None
@@ -210,8 +214,8 @@ class BaseLikelihoodEvaluator(object):
                 raise ValueError("must provide sampling transforms for the "
                                  "sampling parameters")
             # pull out the replaced parameters
-            self._sampling_args = [arg for arg in self._variable_args \
-                                       if arg not in replace_parameters]
+            self._sampling_args = [arg for arg in self._variable_args if
+                                   arg not in replace_parameters]
             # add the samplign parameters
             self._sampling_args += sampling_parameters
             self._sampling_transforms = sampling_transforms
@@ -265,9 +269,8 @@ class BaseLikelihoodEvaluator(object):
         """
         if self._sampling_transforms is None:
             return samples
-        return pycbc.transforms.apply_transforms(samples,
-                                                 self._sampling_transforms,
-                                                 inverse=inverse)
+        return transforms.apply_transforms(samples, self._sampling_transforms,
+                                           inverse=inverse)
 
     @property
     def lognl(self):
@@ -286,7 +289,8 @@ class BaseLikelihoodEvaluator(object):
         Let :math:`\mathbf{x}` be the set of variable parameters,
         :math:`\mathbf{y} = f(\mathbf{x})` the set of sampling parameters, and
         :math:`p_x(\mathbf{x})` a probability density function defined over
-        :math:`\mathbf{x}`. The corresponding pdf in :math:`\mathbf{y}` is then:
+        :math:`\mathbf{x}`.
+        The corresponding pdf in :math:`\mathbf{y}` is then:
 
         .. math::
 
@@ -317,8 +321,8 @@ class BaseLikelihoodEvaluator(object):
         if self._sampling_transforms is None:
             return 0.
         else:
-            return numpy.log(abs(pycbc.transforms.compute_jacobian(params,
-                self._sampling_transforms, inverse=True)))
+            return numpy.log(abs(transforms.compute_jacobian(
+                params, self._sampling_transforms, inverse=True)))
 
     def prior(self, **params):
         """This function should return the prior of the given params.
@@ -481,7 +485,7 @@ class BaseLikelihoodEvaluator(object):
         params = self._prior.apply_boundary_conditions(**params)
         # apply waveform transforms
         if self._waveform_transforms is not None:
-            params = pycbc.transforms.apply_transforms(params,
+            params = transforms.apply_transforms(params,
                                                  self._waveform_transforms,
                                                  inverse=False)
         # apply any boundary conditions to the parameters before
@@ -546,6 +550,7 @@ class TestNormal(BaseLikelihoodEvaluator):
         """
         return self._dist.logpdf([params[p] for p in self.variable_args])
 
+
 class TestEggbox(BaseLikelihoodEvaluator):
     r"""The test distribution is an 'eggbox' function:
 
@@ -576,8 +581,9 @@ class TestEggbox(BaseLikelihoodEvaluator):
     def loglikelihood(self, **params):
         """Returns the log pdf of the eggbox function.
         """
-        return (2 + numpy.prod(numpy.cos([params[p]/2. for p in
-                                          self.variable_args])))**5
+        return (2 + numpy.prod(numpy.cos([
+            params[p]/2. for p in self.variable_args]))) ** 5
+
 
 class TestRosenbrock(BaseLikelihoodEvaluator):
     r"""The test distribution is the Rosenbrock function:
@@ -615,6 +621,7 @@ class TestRosenbrock(BaseLikelihoodEvaluator):
             l -= ((1 - p[i])**2 + 100 * (p[i+1] - p[i]**2)**2)
         return l
 
+
 class TestVolcano(BaseLikelihoodEvaluator):
     r"""The test distribution is a two-dimensional 'volcano' function:
 
@@ -650,8 +657,10 @@ class TestVolcano(BaseLikelihoodEvaluator):
         p = [params[p] for p in self.variable_args]
         r = numpy.sqrt(p[0]**2 + p[1]**2)
         mu, sigma = 5.0, 2.0
-        return 25 * (numpy.exp(-r/35) + 1 / (sigma * numpy.sqrt(2 * numpy.pi)) \
-                     * numpy.exp(-0.5 * ((r - mu) / sigma) ** 2))
+        return 25 * (
+            numpy.exp(-r/35) + 1 / (sigma * numpy.sqrt(2 * numpy.pi)) *
+            numpy.exp(-0.5 * ((r - mu) / sigma) ** 2))
+
 
 #
 # =============================================================================
@@ -660,6 +669,7 @@ class TestVolcano(BaseLikelihoodEvaluator):
 #
 # =============================================================================
 #
+
 class GaussianLikelihood(BaseLikelihoodEvaluator):
     r"""Computes log likelihoods assuming the detectors' noise is Gaussian.
 
@@ -822,17 +832,18 @@ class GaussianLikelihood(BaseLikelihoodEvaluator):
             waveform_generator=waveform_generator, data=data,
             **kwargs)
         # check that the data and waveform generator have the same detectors
-        if sorted(waveform_generator.detectors.keys()) != \
-                sorted(self._data.keys()):
-            raise ValueError("waveform generator's detectors (%s) " %(
-                ','.join(sorted(waveform_generator.detector_names))) +
-                "does not match data (%s)" %(
-                ','.join(sorted(self._data.keys()))))
+        if (sorted(waveform_generator.detectors.keys()) !=
+                sorted(self._data.keys())):
+            raise ValueError(
+                "waveform generator's detectors ({0}) does not "
+                "match data ({1})".format(
+                    ','.join(sorted(waveform_generator.detector_names)),
+                    ','.join(sorted(self._data.keys()))))
         # check that the data and waveform generator have the same epoch
         if any(waveform_generator.epoch != d.epoch
                for d in self._data.values()):
             raise ValueError("waveform generator does not have the same epoch "
-                "as all of the data sets.")
+                             "as all of the data sets.")
         # check that the data sets all have the same lengths
         dlens = numpy.array([len(d) for d in data.values()])
         if not all(dlens == dlens[0]):
@@ -842,7 +853,7 @@ class GaussianLikelihood(BaseLikelihoodEvaluator):
         N = len(d)
         # figure out the kmin, kmax to use
         kmin, kmax = filter.get_cutoff_indices(f_lower, f_upper, d.delta_f,
-            (N-1)*2)
+                                               (N-1)*2)
         self._kmin = kmin
         self._kmax = kmax
         if norm is None:
@@ -893,7 +904,7 @@ class GaussianLikelihood(BaseLikelihoodEvaluator):
         except NoWaveformError:
             # if no waveform was generated, just return 0
             return lr
-        for det,h in wfs.items():
+        for det, h in wfs.items():
             # the kmax of the waveforms may be different than internal kmax
             kmax = min(len(h), self._kmax)
             # whiten the waveform
@@ -901,13 +912,14 @@ class GaussianLikelihood(BaseLikelihoodEvaluator):
                 # if the waveform terminates before the filtering low frequency
                 # cutoff, there is nothing to filter, so just go onto the next
                 continue
-            h[self._kmin:kmax] *= self._weight[det][self._kmin:kmax]
+            slc = slice(self._kmin, kmax)
+            h[self._kmin:kmax] *= self._weight[det][slc]
             lr += (
                 # <h, d>
-                self.data[det][self._kmin:kmax].inner(h[self._kmin:kmax]).real
-                # - <h, h>/2.
-                - 0.5*h[self._kmin:kmax].inner(h[self._kmin:kmax]).real
-                )
+                self.data[det][slc].inner(h[slc]).real -
+                # <h, h>/2.
+                0.5*h[slc].inner(h[slc]).real
+            )
         return numpy.float64(lr)
 
     def loglikelihood(self, **params):
@@ -931,7 +943,6 @@ class GaussianLikelihood(BaseLikelihoodEvaluator):
         # since the loglr has fewer terms, we'll call that, then just add
         # back the noise term that canceled in the log likelihood ratio
         return self.loglr(**params) + self._lognl
-
 
     def logposterior(self, **params):
         """Computes the log-posterior probability at the given point in
@@ -1003,7 +1014,7 @@ class MarginalizedPhaseGaussianLikelihood(GaussianLikelihood):
     Gathering all of the terms that are not dependent on :math:`\phi` together:
 
     .. math::
-    
+
         \alpha(\Theta, d) \equiv \exp\left[-\frac{1}{2}\sum_i \left<h^0_i, h^0_i\right> + <d_i, d_i\right>\right],
 
     we can marginalize the posterior over :math:`\phi`:
@@ -1012,7 +1023,7 @@ class MarginalizedPhaseGaussianLikelihood(GaussianLikelihood):
 
         p(\Theta|d) &\propto p(\Theta)\alpha(\Theta,d)\frac{1}{2\pi}\int_{0}^{2\pi}\exp\left[\Re \left\{ e^{-i\phi} \sum_i O(h^0_i, d_i)\right\}\right]\mathrm{d}\phi \\
         &\propto p(\Theta)\alpha(\Theta, d)\frac{1}{2\pi} \int_{0}^{2\pi}\exp\left[x(\Theta,d)\cos(\phi) + y(\Theta, d)\sin(\phi)\right]\mathrm{d}\phi.
-    
+
     The integral in the last line is equal to :math:`2\pi I_0(\sqrt{x^2+y^2})`,
     where :math:`I_0` is the modified Bessel function of the first kind. Thus
     the marginalized log posterior is:
@@ -1052,7 +1063,7 @@ class MarginalizedPhaseGaussianLikelihood(GaussianLikelihood):
             return 0.
         hh = 0.
         hd = 0j
-        for det,h in wfs.items():
+        for det, h in wfs.items():
             # the kmax of the waveforms may be different than internal kmax
             kmax = min(len(h), self._kmax)
             # whiten the waveform
@@ -1066,13 +1077,16 @@ class MarginalizedPhaseGaussianLikelihood(GaussianLikelihood):
         hd = abs(hd)
         return numpy.log(special.i0e(hd)) + hd - 0.5*hh
 
-likelihood_evaluators = {TestEggbox.name: TestEggbox,
-                         TestNormal.name: TestNormal,
-                         TestRosenbrock.name: TestRosenbrock,
-                         TestVolcano.name: TestVolcano,
-                         GaussianLikelihood.name: GaussianLikelihood,
-                         MarginalizedPhaseGaussianLikelihood.name: \
-                            MarginalizedPhaseGaussianLikelihood}
 
-__all__ = ['BaseLikelihoodEvaluator', 'TestNormal', 'TestEggbox', 'TestVolcano',
-           'TestRosenbrock', 'GaussianLikelihood', 'likelihood_evaluators']
+likelihood_evaluators = {cls.name: cls for cls in (
+    TestEggbox,
+    TestNormal,
+    TestRosenbrock,
+    TestVolcano,
+    GaussianLikelihood,
+    MarginalizedPhaseGaussianLikelihood,
+)}
+
+__all__ = ['BaseLikelihoodEvaluator', 'TestNormal', 'TestEggbox',
+           'TestVolcano', 'TestRosenbrock', 'GaussianLikelihood',
+           'likelihood_evaluators']

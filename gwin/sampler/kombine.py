@@ -96,7 +96,8 @@ class KombineSampler(BaseMCMCSampler):
         return numpy.mean(self._sampler.acceptance, axis=0)
 
     @classmethod
-    def from_cli(cls, opts, likelihood_evaluator, pool=None, likelihood_call=None):
+    def from_cli(cls, opts, likelihood_evaluator, pool=None,
+                 likelihood_call=None):
         """Create an instance of this sampler from the given command-line
         options.
 
@@ -256,7 +257,7 @@ class KombineSampler(BaseMCMCSampler):
 
         # save clustered KDE data
         subgroup = "clustered_kde"
-        dataset_name ="/".join([fp.sampler_group, subgroup])
+        dataset_name = "/".join([fp.sampler_group, subgroup])
         clustered_kde = self._sampler._kde
         self._write_kde(fp, dataset_name, clustered_kde)
         # metadata
@@ -270,7 +271,6 @@ class KombineSampler(BaseMCMCSampler):
         for i, kde in enumerate(clustered_kde._kdes):
             dataset_name = "/".join([fp.sampler_group, "kde" + str(i)])
             self._write_kde(fp, dataset_name, kde)
-
 
     def set_state_from_file(self, fp):
         """Sets the state of the sampler back to the instance saved in a file.

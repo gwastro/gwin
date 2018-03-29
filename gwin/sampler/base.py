@@ -51,7 +51,7 @@ def _check_fileformat(read_function):
                             "where FILE.hdf is the name of the file to "
                             "convert to. (Ignore this warning if you are "
                             "doing that now.)\n\n".format(fp.filename,
-                            convert_cmd))
+                                                          convert_cmd))
             # we'll replace cls._read_fields with _read_oldstyle_fields, so
             # that when the read_function calls cls._read_fields, it points
             # to the oldstyle function. First we'll keep a backup copy of
@@ -89,7 +89,7 @@ def _check_aclfileformat(read_function):
                             "where FILE.hdf is the name of the file to "
                             "convert to. (Ignore this warning if you are "
                             "doing that now.)\n\n".format(fp.filename,
-                            convert_cmd))
+                                                          convert_cmd))
             # call oldstyle function instead
             return fp.sampler_class._oldstyle_read_acls(fp)
         else:
@@ -238,7 +238,7 @@ class _BaseSampler(object):
                 val = str(None)
             if isinstance(val, dict):
                 fp.attrs[arg] = val.keys()
-                for key,item in val.items():
+                for key, item in val.items():
                     if item is None:
                         item = str(None)
                     fp.attrs[key] = item
@@ -368,7 +368,7 @@ class BaseMCMCSampler(_BaseSampler):
         # if samples are given then use those as initial positions
         if samples_file is not None:
             samples = self.read_samples(samples_file, self.variable_args,
-                iteration=-1)
+                                        iteration=-1)
             # transform to sampling parameter space
             samples = self.likelihood_evaluator.apply_sampling_transforms(
                 samples)
@@ -413,8 +413,8 @@ class BaseMCMCSampler(_BaseSampler):
         samples = self.chain
         sampling_args = self.sampling_args
         # convert to dictionary to apply boundary conditions
-        samples = {param: samples[...,ii]
-                   for ii,param in enumerate(sampling_args)}
+        samples = {param: samples[..., ii] for
+                   ii, param in enumerate(sampling_args)}
         samples = self.likelihood_evaluator._prior.apply_boundary_conditions(
             **samples)
         # now convert to field array
@@ -422,8 +422,8 @@ class BaseMCMCSampler(_BaseSampler):
                                           for param in sampling_args],
                                          names=sampling_args)
         # apply transforms to go to variable args space
-        return self.likelihood_evaluator.apply_sampling_transforms(samples,
-            inverse=True)
+        return self.likelihood_evaluator.apply_sampling_transforms(
+            samples, inverse=True)
 
     @property
     def likelihood_stats(self):
@@ -519,7 +519,7 @@ class BaseMCMCSampler(_BaseSampler):
                 fp.create_dataset(dataset_name, (nwalkers, istop),
                                   maxshape=(nwalkers, max_iterations),
                                   dtype=float, fletcher32=True)
-            fp[dataset_name][:,istart:istop] = samples[param]
+            fp[dataset_name][:, istart:istop] = samples[param]
 
     def write_chain(self, fp, start_iteration=None, max_iterations=None):
         """Writes the samples from the current chain to the given file.
@@ -652,8 +652,9 @@ class BaseMCMCSampler(_BaseSampler):
 
     @staticmethod
     def _read_oldstyle_fields(fp, fields_group, fields, array_class,
-                     thin_start=None, thin_interval=None, thin_end=None,
-                     iteration=None, walkers=None, flatten=True):
+                              thin_start=None, thin_interval=None,
+                              thin_end=None, iteration=None, walkers=None,
+                              flatten=True):
         """Base function for reading samples and likelihood stats. See
         `read_samples` and `read_likelihood_stats` for details.
 
@@ -973,9 +974,9 @@ class BaseMCMCSampler(_BaseSampler):
         acls = {}
         for param in fp.variable_args:
             samples = cls.read_samples(fp, param,
-                                           thin_start=start_index,
-                                           thin_interval=1, thin_end=end_index,
-                                           flatten=False)[param]
+                                       thin_start=start_index,
+                                       thin_interval=1, thin_end=end_index,
+                                       flatten=False)[param]
             samples = samples.mean(axis=0)
             acl = autocorrelation.calculate_acl(samples)
             if numpy.isinf(acl):
