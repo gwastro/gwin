@@ -98,7 +98,7 @@ setup(
     long_description=longdesc,
     author='Collin Capano',
     author_email='collin.capano@ligo.org',
-    url='https://github.com/gwin/gwin',
+    url='https://github.com/gwastro/gwin',
     license='GPLv3',
     packages=find_packages(),
     scripts=find_scripts(),
