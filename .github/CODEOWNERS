@@ -1,0 +1,23 @@
+# Code owners for GWIn
+#
+# This file lists the 'owner' of each file in the repo
+# The owner is automatically requested for review whenever a PR is opened
+# that modifies a matching file reference
+
+# build files
+/.codeclimate.yml  @duncanmmacleod
+/.gitignore        @duncanmmacleod
+/.travis.yml       @duncanmmacleod
+/requirements.txt  @duncanmmacleod
+/setup.py          @duncanmmacleod
+/setup.cfg         @duncanmmacleod
+/CONTRIBUTING.md   @duncanmmacleod
+/LICENSE           @duncanmmacleod
+/MANIFEST.in       @duncanmmacleod
+/README.rst        @duncanmmacleod
+
+# github files
+/.github/          @duncanmmacleod
+
+# tests
+/test/             @duncanmmacleod
