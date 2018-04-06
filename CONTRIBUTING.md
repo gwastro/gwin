@@ -29,19 +29,19 @@ git clone https://github.com/<username>/gwin.git
 
 ### Updating your fork
 
-If you already have a fork of GWIn, and are starting work on a new project you can link your clone to the main (`upstream`) repository and pull in changes that have been merged since the time you created your fork, or last updated:
+If you already have a fork of GWIn, and are starting work on a new project you can link your clone to the main (`gwastro`) repository and pull in changes that have been merged since the time you created your fork, or last updated:
 
 1. Link your fork to the main repository:
 
     ```bash
-    cd lalsuite
-    git remote add upstream https://github.com/gwastro/gwin.git
+    cd gwin
+    git remote add gwastro https://github.com/gwastro/gwin.git
     ```
 
-2. Fetch new changes from the `upstream` repo
+2. Fetch new changes from the `gwastro` repo
 
     ```bash
-    git fetch upstream
+    git fetch gwastro
     ```
 
 ### Creating a new feature branch
@@ -51,7 +51,8 @@ All changes should be developed on a feature branch, in order to keep them separ
 To create a new feature branch:
 
 ```bash
-git checkout -b my-new-feature upstream/master
+git fetch gwastro
+git checkout -b my-new-feature gwastro/master
 ```
 
 ### Hack away
@@ -75,7 +76,7 @@ git checkout -b my-new-feature upstream/master
 
 ### Open a Pull Request
 
-When you feel that your work is finished, you should create a Pull Request to propose that your changes be merged into the main (`upstream`) repository.
+When you feel that your work is finished, you should create a Pull Request to propose that your changes be merged into the main (`gwastro`) repository.
 
 After you have pushed your new feature branch to `origin`, you should find a new button on the [GWIn repository home page](https://github.com/gwastro/gwin/) inviting you to create a Pull Request out of your newly pushed branch.
 You should click the button, and proceed to fill in the title and description boxes on the PR page.
