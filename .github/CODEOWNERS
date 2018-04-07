@@ -21,3 +21,30 @@
 
 # tests
 /test/             @duncanmmacleod
+
+# -- modules ------------------------------------
+
+/gwin/                          @cdcapano
+/gwin/gelman_rubin.py           @cmbiwer
+/gwin/workflow.py               @cmbiwer
+
+/gwin/io/hdf.py                 @cmbiwer
+/gwin/io/txt.py                 @cmbiwer
+
+/gwin/sampler/                  @cmbiwer
+/gwin/sampler/mcmc.py           @vivienr
+
+# -- scripts ------------------------------------
+
+/bin/                           @cdcapano
+/bin/gwin                       @cmbiwer
+/bin/gwin_make_inj_workflow     @cmbiwer
+/bin/gwin_make_workflow         @cmbiwer
+/bin/gwin_plot_acceptance_rate  @cmbiwer
+/bin/gwin_plot_acf              @cmbiwer
+/bin/gwin_plot_acl              @cmbiwer
+/bin/gwin_plot_gelman_rubin     @cmbiwer
+/bin/gwin_plot_geweke           @cmbiwer
+/bin/gwin_plot_prior            @cmbiwer
+/bin/gwin_plot_samples          @cmbiwer
+/bin/gwin_table_summary         @cmbiwer
