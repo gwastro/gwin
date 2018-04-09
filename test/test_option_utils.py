@@ -19,7 +19,10 @@
 
 import argparse
 
-import mock
+try:
+    from unittest import mock
+except ImportError:  # python 2.x
+    import mock
 
 import pytest
 

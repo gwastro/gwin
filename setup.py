@@ -71,6 +71,9 @@ tests_require = [
     'pytest>=2.8',
 ]
 
+if sys.version < '3':
+    tests_require.append('mock')
+
 
 # -- files --------------------------------------------------------------------
 
