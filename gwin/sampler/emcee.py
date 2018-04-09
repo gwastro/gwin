@@ -32,7 +32,7 @@ import numpy
 from pycbc.io import FieldArray
 from pycbc.filter import autocorrelation
 
-from .base import BaseMCMCSampler, _check_fileformat
+from .base import BaseMCMCSampler
 
 
 #
@@ -598,75 +598,6 @@ class EmceePTSampler(BaseMCMCSampler):
         self.write_state(fp)
 
     @staticmethod
-    def _read_oldstyle_fields(fp, fields_group, fields, array_class,
-                              thin_start=None, thin_interval=None,
-                              thin_end=None, iteration=None, temps=None,
-                              walkers=None, flatten=True):
-        """Base function for reading samples and likelihood stats. See
-        `read_samples` and `read_likelihood_stats` for details.
-
-        This function is to provide backward compatability with older files.
-        This will be removed in a future update.
-
-        Parameters
-        -----------
-        fp : InferenceFile
-            An open file handler to read the samples from.
-        fields_group : str
-            The name of the group to retrieve the desired fields.
-        fields : list
-            The list of field names to retrieve. Must be names of groups in
-            `fp[fields_group/]`.
-        array_class : FieldArray or similar
-            The type of array to return. Must have a `from_kwargs` attribute.
-
-        For other details on keyword arguments, see `read_samples` and
-        `read_likelihood_stats`.
-
-        Returns
-        -------
-        array_class
-            An instance of the given array class populated with values
-            retrieved from the fields.
-        """
-        # walkers to load
-        if walkers is None:
-            walkers = range(fp.nwalkers)
-        if isinstance(walkers, int):
-            walkers = [walkers]
-
-        # temperatures to load
-        if temps is None:
-            temps = 0
-        if temps == 'all':
-            temps = range(fp.ntemps)
-        if isinstance(temps, int):
-            temps = [temps]
-
-        # get the slice to use
-        if iteration is not None:
-            get_index = [iteration]
-        else:
-            if thin_end is None:
-                # use the number of current iterations
-                thin_end = fp.niterations
-            get_index = fp.get_slice(thin_start=thin_start, thin_end=thin_end,
-                                     thin_interval=thin_interval)
-
-        # load
-        arrays = {}
-        group = fields_group + '/{name}/temp{tk}/walker{wi}'
-        for name in fields:
-            these_arrays = numpy.array(
-                [[fp[group.format(name=name, wi=wi, tk=tk)][get_index]
-                 for wi in walkers]
-                 for tk in temps])
-            if flatten:
-                these_arrays = these_arrays.flatten()
-            arrays[name] = these_arrays
-        return array_class.from_kwargs(**arrays)
-
-    @staticmethod
     def _read_fields(fp, fields_group, fields, array_class,
                      thin_start=None, thin_interval=None, thin_end=None,
                      iteration=None, temps=None, walkers=None, flatten=True):
@@ -751,7 +682,6 @@ class EmceePTSampler(BaseMCMCSampler):
         return array_class.from_kwargs(**arrays)
 
     @classmethod
-    @_check_fileformat
     def read_samples(cls, fp, parameters,
                      thin_start=None, thin_interval=None, thin_end=None,
                      iteration=None, temps=0, walkers=None, flatten=True,
@@ -968,30 +898,6 @@ class EmceePTSampler(BaseMCMCSampler):
                 these_acls[tk] = acl
             acls[param] = these_acls
         return acls
-
-    @staticmethod
-    def _oldstyle_read_acls(fp):
-        """Deprecated: reads acls from older style files.
-
-        Parameters
-        ----------
-        fp : InferenceFile
-            An open file handler to read the acls from.
-
-        Returns
-        -------
-        FieldArray
-            An ntemps-long ``FieldArray`` containing the acls for every
-            temperature, with the variable arguments as fields.
-        """
-        group = fp.samples_group + '/{param}/temp{tk}'
-        tidx = numpy.arange(fp.ntemps)
-        arrays = {}
-        for param in fp.variable_args:
-            arrays[param] = numpy.array([
-                fp[group.format(param=param, tk=tk)].attrs['acl']
-                for tk in tidx])
-        return FieldArray.from_kwargs(**arrays)
 
     @classmethod
     def calculate_logevidence(cls, fp, thin_start=None, thin_end=None,

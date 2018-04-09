@@ -33,70 +33,6 @@ import h5py
 import logging
 
 
-# decorator to provide backward compatability with old file formats
-def _check_fileformat(read_function):
-    """Decorator function for determing which read function to call."""
-    def read_wrapper(cls, fp, *args, **kwargs):
-        # check for old style
-        check_group = '{}/{}'.format(fp.samples_group, fp.variable_args[0])
-        if not isinstance(fp[check_group], h5py.Dataset):
-            convert_cmd = ("pycbc_inference_extract_samples --input-file {} "
-                           "--thin-start 0 --thin-interval 1 --output-file "
-                           "FILE.hdf".format(fp.filename))
-            logging.warning("\n\nDEPRECATION WARNING: The file {} appears to  "
-                            "have been written using an older style file "
-                            "format. Support for this format will be removed "
-                            "in a future update. To convert this file, run: "
-                            "\n\n{}\n\n"
-                            "where FILE.hdf is the name of the file to "
-                            "convert to. (Ignore this warning if you are "
-                            "doing that now.)\n\n".format(fp.filename,
-                                                          convert_cmd))
-            # we'll replace cls._read_fields with _read_oldstyle_fields, so
-            # that when the read_function calls cls._read_fields, it points
-            # to the oldstyle function. First we'll keep a backup copy of
-            # _read_fields, so that oldstyle and new style files can be loaded
-            # in the same environment
-            cls._bkup_read_fields = cls._read_fields
-            cls._read_fields = staticmethod(cls._read_oldstyle_fields)
-        else:
-            # if an oldstyle file was loaded previously, _read_fields will
-            # point to _read_oldstyle_fields; restore _read_fields
-            try:
-                cls._read_fields = staticmethod(cls._bkup_read_fields.im_func)
-            except AttributeError:
-                pass
-        return read_function(cls, fp, *args, **kwargs)
-    return read_wrapper
-
-
-def _check_aclfileformat(read_function):
-    """Decorator function for determing which read acl function to call."""
-    def read_wrapper(fp):
-        # check for old style
-        check_group = '{}/{}'.format(fp.samples_group, fp.variable_args[0])
-        if 'acls' not in fp.keys() and not isinstance(fp[check_group],
-                                                      h5py.Dataset):
-            convert_cmd = ("pycbc_inference_extract_samples --input-file {} "
-                           "--thin-start 0 --thin-interval 1 --output-file "
-                           "FILE.hdf".format(fp.filename))
-            logging.warning("\n\n"
-                            "DEPRECATION WARNING: The acls in file {} appear "
-                            "to have been written using an older style file "
-                            "format. Support for this format will be removed "
-                            "in a future update. To convert this file, run: "
-                            "\n\n{}\n\n"
-                            "where FILE.hdf is the name of the file to "
-                            "convert to. (Ignore this warning if you are "
-                            "doing that now.)\n\n".format(fp.filename,
-                                                          convert_cmd))
-            # call oldstyle function instead
-            return fp.sampler_class._oldstyle_read_acls(fp)
-        else:
-            return read_function(fp)
-    return read_wrapper
-
-
 #
 # =============================================================================
 #
@@ -651,67 +587,6 @@ class BaseMCMCSampler(_BaseSampler):
         self.write_state(fp)
 
     @staticmethod
-    def _read_oldstyle_fields(fp, fields_group, fields, array_class,
-                              thin_start=None, thin_interval=None,
-                              thin_end=None, iteration=None, walkers=None,
-                              flatten=True):
-        """Base function for reading samples and likelihood stats. See
-        `read_samples` and `read_likelihood_stats` for details.
-
-        This function is to provide backward compatability with older files.
-        This will be removed in a future update.
-
-        Parameters
-        -----------
-        fp : InferenceFile
-            An open file handler to read the samples from.
-        fields_group : str
-            The name of the group to retrieve the desired fields.
-        fields : list
-            The list of field names to retrieve. Must be names of groups in
-            `fp[fields_group/]`.
-        array_class : FieldArray or similar
-            The type of array to return. Must have a `from_kwargs` attribute.
-
-        For other details on keyword arguments, see `read_samples` and
-        `read_likelihood_stats`.
-
-        Returns
-        -------
-        array_class
-            An instance of the given array class populated with values
-            retrieved from the fields.
-        """
-        # walkers to load
-        if walkers is None:
-            walkers = range(fp.nwalkers)
-        if isinstance(walkers, int):
-            walkers = [walkers]
-
-        # get the slice to use
-        if iteration is not None:
-            get_index = iteration
-        else:
-            if thin_end is None:
-                # use the number of current iterations
-                thin_end = fp.niterations
-            get_index = fp.get_slice(thin_start=thin_start, thin_end=thin_end,
-                                     thin_interval=thin_interval)
-
-        # load
-        arrays = {}
-        group = fields_group + '/{name}/walker{wi}'
-        for name in fields:
-            these_arrays = [
-                    fp[group.format(name=name, wi=wi)][get_index]
-                    for wi in walkers]
-            if flatten:
-                arrays[name] = numpy.hstack(these_arrays)
-            else:
-                arrays[name] = numpy.vstack(these_arrays)
-        return array_class.from_kwargs(**arrays)
-
-    @staticmethod
     def _read_fields(fp, fields_group, fields, array_class,
                      thin_start=None, thin_interval=None, thin_end=None,
                      iteration=None, walkers=None, flatten=True):
@@ -765,7 +640,6 @@ class BaseMCMCSampler(_BaseSampler):
         return array_class.from_kwargs(**arrays)
 
     @classmethod
-    @_check_fileformat
     def read_samples(cls, fp, parameters,
                      thin_start=None, thin_interval=None, thin_end=None,
                      iteration=None, walkers=None, flatten=True,
@@ -1019,25 +893,6 @@ class BaseMCMCSampler(_BaseSampler):
         return fp.attrs['acl']
 
     @staticmethod
-    def _oldstyle_read_acls(fp):
-        """Reads the acls of all the parameters in the given file.
-
-        Parameters
-        ----------
-        fp : InferenceFile
-            An open file handler to read the acls from.
-
-        Returns
-        -------
-        dict
-            A dictionary of the ACLs, keyed by the parameter name.
-        """
-        group = fp.samples_group + '/{param}'
-        return {param: fp[group.format(param=param)]
-                for param in fp.variable_args}
-
-    @staticmethod
-    @_check_aclfileformat
     def read_acls(fp):
         """Reads the acls of all the parameters in the given file.
 
