@@ -278,12 +278,6 @@ def add_sampler_option_group(parser):
         help="Force the burn-in to be at least the given number of "
              "iterations.")
     sampler_group.add_argument(
-        "--skip-burn-in", action="store_true",
-        default=False,
-        help="DEPRECATED. Turning this option on has no effect; "
-             "it will be removed in future versions. If no burn in is "
-             "desired, simply do not provide a burn-in-function argument.")
-    sampler_group.add_argument(
         "--update-interval", type=int, default=None,
         help="If using kombine, specify the number of steps to take between "
              "proposal updates. Note: for purposes of updating, kombine "

@@ -176,14 +176,6 @@ else:
 likelihood_class = gwin.likelihood_evaluators[opts.likelihood_evaluator]
 likelihood_args = {}
 
-# warn user about options that will be removed
-if opts.skip_burn_in:
-    logging.warning("DEPRECATION WARNING: Option --skip-burn-in has been "
-                    "deprecated and does nothing. "
-                    "If you wish to use no burn in, simply do not "
-                    "provide a burn-in-function. This option will be removed "
-                    "in future versions.")
-
 # set seed
 numpy.random.seed(opts.seed)
 logging.info("Using seed %i", opts.seed)
