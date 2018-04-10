@@ -20,11 +20,6 @@
 import argparse
 import os.path
 
-try:
-    from unittest import mock
-except ImportError:  # python 2.x
-    import mock
-
 import pytest
 
 from pycbc.workflow import WorkflowConfigParser
@@ -35,6 +30,7 @@ from gwin.io.hdf import InferenceFile
 from gwin.io.txt import InferenceTXTFile
 from gwin.sampler import samplers as SAMPLERS
 
+from utils import mock
 from utils.core import tempfile_with_content
 
 __author__ = 'Duncan Macleod <duncan.macleod@ligo.org>'
