@@ -14,6 +14,8 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
+import tempfile
+
 import pytest
 
 
@@ -27,3 +29,13 @@ def get_parametrized_value(request, param, default):
         return request.getfixturevalue(param)
     except LookupError:
         return default
+
+
+def tempfile_with_content(content, **kwargs):
+    """Create a `tempfile.NamedTemporaryFile` with content
+    """
+    kwargs.setdefault('delete', True)
+    tmpf = tempfile.NamedTemporaryFile(**kwargs)
+    tmpf.write(content)
+    tmpf.seek(0)
+    return tmpf

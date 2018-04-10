@@ -18,6 +18,7 @@
 """
 
 import argparse
+import os.path
 
 try:
     from unittest import mock
@@ -26,12 +27,58 @@ except ImportError:  # python 2.x
 
 import pytest
 
+from pycbc.workflow import WorkflowConfigParser
+from pycbc.distributions.constraints import MtotalLT
+
 from gwin import option_utils
 from gwin.io.hdf import InferenceFile
 from gwin.io.txt import InferenceTXTFile
-from gwin.sampler import MCMCSampler
+from gwin.sampler import samplers as SAMPLERS
+
+from utils.core import tempfile_with_content
 
 __author__ = 'Duncan Macleod <duncan.macleod@ligo.org>'
+
+TEST_CONFIGURATION = """
+[test]
+a = 1
+b = 2
+
+[variable_args]
+mass1 =
+mass2 =
+
+[static_args]
+ra = 0
+dec = 0
+extra = [1, 2, 3]
+
+[prior-mass1]
+
+[constraint-mtotal]
+name = mtotal_lt
+constraint_arg = anything
+required_parameters = mass1,mass2
+
+[sampling_parameters]
+mass1, mass2 = mchirp, logitq
+spin1_a = logitspin1_a
+
+[test_sampling_parameters]
+a, b = c, d
+"""
+
+
+@pytest.fixture
+def config(scope='function'):
+    # create WorkflowConfigParser and yield to test method
+    with tempfile_with_content(TEST_CONFIGURATION) as cfo:
+        yield WorkflowConfigParser([cfo.name])
+
+    # clean up after WorkflowConfigParser
+    _base = os.path.basename(cfo.name)
+    if os.path.exists(_base):
+        os.unlink(os.path.basename(_base))
 
 
 @pytest.mark.parametrize('input_, output', [
@@ -53,6 +100,69 @@ def test_add_config_opts_to_parser():
     assert args.config_overrides == ['test3']
     with pytest.raises(SystemExit):
         parser.parse_args(['--blah'])
+
+
+@pytest.mark.parametrize('overrides', [
+    [],
+    [('test', 'b', 'banana'),],
+])
+def test_config_parser_from_cli(overrides):
+    parser = argparse.ArgumentParser()
+    option_utils.add_config_opts_to_parser(parser)
+
+    with tempfile_with_content(TEST_CONFIGURATION) as cfo:
+        if overrides:
+            ovr = ['--config-overrides'] + [
+                ':'.join(o) for o in overrides]
+        else:
+            ovr = []
+
+        args = parser.parse_args(['--config-files', cfo.name] + ovr)
+
+        try:
+            config = option_utils.config_parser_from_cli(args)
+        finally:  # clean up after WorkflowConfigParser
+            if os.path.exists(os.path.basename(cfo.name)):
+                os.unlink(os.path.basename(cfo.name))
+
+    assert isinstance(config, WorkflowConfigParser)
+    assert config.getint('test', 'a') == 1
+    for sec, opt, val in overrides:
+        assert config.get(sec, opt) == val
+
+
+def test_read_args_from_config(config):
+    # no priors should raise an error
+    with pytest.raises(KeyError) as exc:
+        option_utils.read_args_from_config(config)
+    assert 'mass2' in str(exc.value)
+
+    # add prior section for mass2
+    config.add_section('prior-mass2')
+
+    # now parse again
+    vargs, sargs, cons = option_utils.read_args_from_config(config)
+
+    # and check values
+    assert vargs == ['mass1', 'mass2']
+    assert sargs == {'ra': 0., 'dec': 0., 'extra': ['1', '2', '3']}
+    assert isinstance(cons[0], MtotalLT)
+
+    # check that no [static_args] is ok
+    config.remove_section('static_args')
+    _, sargs, _ = option_utils.read_args_from_config(config)
+    assert sargs == {}
+
+
+@pytest.mark.parametrize('prefix, out1, out2', [
+    (None, {'logitspin1_a', 'mchirp', 'logitq'},
+     {'mass1', 'mass2', 'spin1_a'}),
+    ('test', {'c', 'd'}, {'a', 'b'}),
+])
+def test_read_sampling_args_from_config(config, prefix, out1, out2):
+    spars, rpars = option_utils.read_sampling_args_from_config(config, section_group=prefix)
+    assert spars == list(out1)
+    assert rpars == list(out2)
 
 
 def test_add_sampler_option_group(capsys):
@@ -91,14 +201,17 @@ def test_add_sampler_option_group(capsys):
 
 
 @mock.patch('gwin.likelihood.GaussianLikelihood')
-def test_sampler_from_cli(Likelihood):
+@pytest.mark.parametrize('name', SAMPLERS.keys())
+def test_sampler_from_cli(Likelihood, name):
     parser = argparse.ArgumentParser()
     option_utils.add_sampler_option_group(parser)
     args = parser.parse_args([
-        '--sampler', 'mcmc',
+        '--sampler', name,
+        '--nwalkers', '2',  # required for some samplers
+        '--ntemps', '1',  # required for some samplers
     ])
     sampler = option_utils.sampler_from_cli(args, Likelihood())
-    assert isinstance(sampler, MCMCSampler)
+    assert isinstance(sampler, SAMPLERS[name])
 
 
 def test_add_low_frequency_cutoff_opt():
