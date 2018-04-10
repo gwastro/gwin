@@ -115,7 +115,7 @@ def n_acl(sampler, fp, nacls=10):
         burn_idx = fp.niterations
     nwalkers = fp.nwalkers
     return numpy.repeat(burn_idx, nwalkers).astype(int), \
-           numpy.repeat(is_burned_in, nwalkers).astype(bool)
+        numpy.repeat(is_burned_in, nwalkers).astype(bool)
 
 
 def max_posterior(sampler, fp):
