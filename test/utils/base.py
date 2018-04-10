@@ -25,8 +25,8 @@ class _TestBase(WaveformMixin):
     def setup_class(cls):
         # basic data parameters
         cls.epoch = 0.
-        cls.data_length = 4 # in seconds
-        cls.sample_rate = 2048. # in Hertz
+        cls.data_length = 4  # in seconds
+        cls.sample_rate = 2048.  # in Hertz
         cls.fmin = 30.0
 
         # derived data parameters

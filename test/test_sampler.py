@@ -43,12 +43,15 @@ from utils import _TestBase
 LIKELIHOOD_EVALUATORS = [n for n in likelihood.likelihood_evaluators if
                          not n.startswith('test_')]
 
+
 # -- parametrisation ----------------------------------------------------------
 
 def with_likelihood_eval():
     return pytest.mark.parametrize('likelihood_eval', LIKELIHOOD_EVALUATORS,
                                    indirect=['likelihood_eval'])
 
+
+# -- tests --------------------------------------------------------------------
 
 class TestSamplers(_TestBase):
     # -- setup ----------------------------------
@@ -76,17 +79,17 @@ class TestSamplers(_TestBase):
         prior_dists = []
         for param, val in zip(parameters, values):
             if param in ["mass1", "mass2"]:
-                dist = distributions.Uniform(**{param : (6, 50)})
+                dist = distributions.Uniform(**{param: (6, 50)})
             elif param in ["inclination", "dec"]:
-                dist = distributions.SinAngle(**{param : None})
+                dist = distributions.SinAngle(**{param: None})
             elif param in ["polarization", "ra", "coa_phase"]:
-                dist = distributions.Uniform(**{param : (0, 2 * 3.1415)})
+                dist = distributions.Uniform(**{param: (0, 2 * 3.1415)})
             elif param in ["distance"]:
                 dist = distributions.UniformRadius(distance=(val - 100,
                                                              val + 300))
             elif param in ["spin1x", "spin1y", "spin1z",
-                           "spin2x", "spin2y", "spin2z",]:
-                dist = distributions.Uniform(**{param : (-0.1, 0.1)})
+                           "spin2x", "spin2y", "spin2z"]:
+                dist = distributions.Uniform(**{param: (-0.1, 0.1)})
             elif param in ["tc"]:
                 dist = distributions.Uniform(tc=(val - 0.2, val + 0.2))
             else:
@@ -99,7 +102,8 @@ class TestSamplers(_TestBase):
                         zdhp_psd, request):
         eval_class = likelihood.likelihood_evaluators[request.param]
         return eval_class(
-            fd_waveform_generator.variable_args, fd_waveform_generator, fd_waveform,
+            fd_waveform_generator.variable_args,
+            fd_waveform_generator, fd_waveform,
             self.fmin, psds={ifo: zdhp_psd for ifo in self.ifos},
             prior=prior_eval, return_meta=False)
 

@@ -104,7 +104,7 @@ def test_add_config_opts_to_parser():
 
 @pytest.mark.parametrize('overrides', [
     [],
-    [('test', 'b', 'banana'),],
+    [('test', 'b', 'banana')],
 ])
 def test_config_parser_from_cli(overrides):
     parser = argparse.ArgumentParser()
@@ -160,7 +160,8 @@ def test_read_args_from_config(config):
     ('test', {'c', 'd'}, {'a', 'b'}),
 ])
 def test_read_sampling_args_from_config(config, prefix, out1, out2):
-    spars, rpars = option_utils.read_sampling_args_from_config(config, section_group=prefix)
+    spars, rpars = option_utils.read_sampling_args_from_config(
+        config, section_group=prefix)
     assert spars == list(out1)
     assert rpars == list(out2)
 

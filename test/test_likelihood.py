@@ -86,6 +86,7 @@ class TestBaseLikelihoodEvaluator(_TestBase):
         finally:
             self.TEST_CLASS._callfunc = _callfunc
 
+
 # -- GaussianLikelihood -------------------------------------------------------
 
 class TestGaussianLikelihood(TestBaseLikelihoodEvaluator):
