@@ -442,7 +442,7 @@ class EmceePTSampler(BaseMCMCSampler):
         ----------
         fp : InferenceFile
             A file handler to an open inference file.
-        \**kwargs :
+        **kwargs :
             All keyword arguments are saved as separate arguments in the
             file attrs. If any keyword argument is a dictionary, the keyword
             will point to the list of keys in the the file's ``attrs``. Each

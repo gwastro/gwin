@@ -296,7 +296,7 @@ class InferenceFile(h5py.File):
             these.
         samples_group : str
             Group in HDF InferenceFile that parameters belong to.
-        \**kwargs :
+        **kwargs :
             The rest of the keyword args are passed to the sampler's
             `read_samples` method.
 
@@ -317,7 +317,7 @@ class InferenceFile(h5py.File):
 
         Parameters
         -----------
-        \**kwargs :
+        **kwargs :
             The keyword args are passed to the sampler's
             `read_likelihood_stats` method.
 
@@ -337,7 +337,7 @@ class InferenceFile(h5py.File):
 
         Parameters
         ----------
-        \**kwargs :
+        **kwargs :
             All keyword arguments are passed to the sampler's
             `read_acceptance_fraction` function.
         Returns
@@ -695,7 +695,7 @@ class InferenceFile(h5py.File):
             `{samples_group}/{param}/walker{x}`, then other will have all of
             the selected samples from all walkers written to
             `{samples_group}/{param}/`.
-        \**kwargs :
+        **kwargs :
             All other keyword arguments are passed to `read_samples`.
 
         Returns
