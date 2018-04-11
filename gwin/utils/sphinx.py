@@ -17,6 +17,9 @@
 """Sphinx/RST for GWIn
 """
 
+__author__ = 'Duncan Macleod <duncan.macleod@ligo.org>'
+
+
 def rst_dict_table(dict_, key_format=str, val_format=str, header=None):
     """Returns an RST-formatted table of keys and values from a `dict`
 
