@@ -1,27 +1,27 @@
-###################################################################
-PyCBC inference documentation (``gwin``)
-###################################################################
+###################################
+GWin on the command line (``gwin``)
+###################################
 
 ===================
 Introduction
 ===================
 
 This page gives details on how to use the various parameter estimation
-executables and modules available in PyCBC. The ``gwin`` subpackage
+executables and modules available in GWin. The ``gwin`` subpackage
 contains classes and functions for evaluating probability distributions,
 likelihoods, and running Bayesian samplers.
 
 ==================================================
-Sampling the parameter space (``pycbc_inference``)
+Sampling the parameter space (``gwin``)
 ==================================================
 
 --------
 Overview
 --------
 
-The executable ``pycbc_inference`` is designed to sample the parameter space
+The executable ``gwin`` is designed to sample the parameter space
 and save the samples in an HDF file. A high-level description of the
-``pycbc_inference`` algorithm is
+``gwin`` algorithm is
 
 #. Estimate a PSD from a model or data.
 
@@ -37,11 +37,11 @@ and save the samples in an HDF file. A high-level description of the
 Options for samplers, likelihood models, and priors
 ---------------------------------------------------
 
-For a full listing of all options run ``pycbc_inference --help``. In this subsection we reference documentation for Python classes that contain more information about choices for samplers, likelihood models, and priors.
+For a full listing of all options run ``gwin --help``. In this subsection we reference documentation for Python classes that contain more information about choices for samplers, likelihood models, and priors.
 
 The user specifies the sampler on the command line with the ``--sampler`` option.
-A complete list of samplers is given in ``pycbc_inference --help``.
-These samplers are described in :py:class:`gwin.sampler_kombine.KombineSampler`, :py:class:`gwin.sampler_emcee.EmceeEnsembleSampler`, and :py:class:`gwin.sampler_emcee.EmceePTSampler`.
+A complete list of samplers is given in ``gwin --help``.
+These samplers are described in :py:class:`gwin.sampler.KombineSampler`, :py:class:`gwin.sampler.EmceeEnsembleSampler`, and :py:class:`gwin.sampler.EmceePTSampler`.
 In addition to ``--sampler`` the user will need to specify the number of walkers to use ``--nwalkers``, and for parallel-tempered samplers the number of temperatures ``--ntemps``. You also need to either specify the number of iterations to run for using ``--niterations`` **or** the number of independent samples to collect using ``--n-independent-samples``. For the latter, a burn-in function must be specified using ``--burn-in-function``. In this case, the program will run until the sampler has burned in, at which point the number of independent samples equals the number of walkers. If the number of independent samples desired is greater than the number of walkers, the program will continue to run until it has collected the specified number of independent samples (to do this, an autocorrelation length is computed at each checkpoint to determine how many iterations need to be skipped to obtain independent samples).
 
 The user specifies the likelihood model on the command line with the ``--likelihood-evaluator`` option. Any choice that starts with ``test_`` is an analytic test distribution that requires no data or waveform generation; see the section below on running on an analytic distribution for more details. For running on data, use ``--likelihood-evaluator gaussian``; this uses :py:class:`gwin.likelihood.GaussianLikelihood` for evaluating posteriors. Examples of using this on a BBH injection and on GW150914 are given below.
@@ -62,10 +62,8 @@ To create a subsection use the ``-`` char, e.g. for one of the mass parameters d
 
 Each prior subsection must have a ``name`` option that identifies what prior to use.
 These distributions are described in :py:mod:`pycbc.distributions`.
-A list of all distributions that can be used is found with
 
-.. literalinclude:: ../examples/distributions/list_distributions.py
-.. command-output:: python ../examples/distributions/list_distributions.py
+.. include:: /_includes/distributions-table.rst
 
 One or more of the ``variable_args`` may be transformed to a different parameter space for purposes of sampling. This is done by specifying a ``[sampling_parameters]`` section. This section specifies which ``variable_args`` to replace with which parameters for sampling. This must be followed by one or more ``[sampling_transforms-{sampling_params}]`` sections that provide the transform class to use. For example, the following would cause the sampler to sample in chirp mass (``mchirp``) and mass ratio (``q``) instead of ``mass1`` and ``mass2``::
 
@@ -100,10 +98,9 @@ Any class in the transforms module may be used. A useful transform for these pur
     inputs = lambda1
     dquad_mon1 = dquadmon_from_lambda(lambda1)
 
-A list of all parameters that are understood by the CBC waveform generator can be found with:
+The following table lists all parameters understood by the CBC waveform generator:
 
-.. literalinclude:: ../examples/inference/list_parameters.py
-.. command-output:: python ../examples/inference/list_parameters.py
+.. include:: /_includes/waveform-parameters.rst
 
 Some common transforms are pre-defined in the code. These are: the mass parameters ``mass1`` and ``mass2`` can be substituted with ``mchirp`` and ``eta`` or ``mchirp`` and ``q``.
 The component spin parameters ``spin1x``, ``spin1y``, and ``spin1z`` can be substituted for polar coordinates ``spin1_a``, ``spin1_azimuthal``, and ``spin1_polar`` (ditto for ``spin2``).
@@ -136,7 +133,7 @@ This example demonstrates how to sample a 2D normal distribution with the ``emce
 
 Then run::
 
-    pycbc_inference --verbose \
+    gwin --verbose \
         --config-files normal2d.ini \
         --output-file normal2d.hdf \
         --sampler emcee \
@@ -148,7 +145,7 @@ This will run the ``emcee`` sampler on the 2D analytic normal distribution with 
 
 To plot the posterior distribution after the last iteration, run::
 
-    pycbc_inference_plot_posterior --verbose \
+    gwin_plot_posterior --verbose \
         --input-file normal2d.hdf \
         --output-file posterior-normal2d.png \
         --plot-scatter \
@@ -157,11 +154,11 @@ To plot the posterior distribution after the last iteration, run::
         --z-arg loglr \
         --iteration -1
 
-This will plot each walker's position as a single point colored by the log likelihood ratio at that point, with the 50th and 90th percentile contours drawn. See below for more information about using ``pycbc_inference_plot_posterior``.
+This will plot each walker's position as a single point colored by the log likelihood ratio at that point, with the 50th and 90th percentile contours drawn. See below for more information about using ``gwin_plot_posterior``.
 
 To make a movie showing how the walkers evolved, run::
 
-    pycbc_inference_plot_movie --verbose \
+    gwin_plot_movie --verbose \
         --input-file normal2d.hdf \
         --output-prefix frames-normal2d \
         --movie-file normal2d_mcmc_evolution.mp4 \
@@ -172,11 +169,11 @@ To make a movie showing how the walkers evolved, run::
         --z-arg loglr \
         --frame-step 1
 
-**Note:** you need ``ffmpeg`` installed for the mp4 to be created. See below for more information on using ``pycbc_inference_plot_movie``.
+**Note:** you need ``ffmpeg`` installed for the mp4 to be created. See below for more information on using ``gwin_plot_movie``.
 
 The number of dimensions of the distribution is set by the number of ``variable_args`` in the configuration file. The names of the ``variable_args`` do not matter, just that the prior sections use the same names (in this example ``x`` and ``y`` were used, but ``foo`` and ``bar`` would be equally valid). A higher (or lower) dimensional distribution can be tested by simply adding more (or less) ``variable_args``.
 
-Which analytic distribution is used is set by the ``--likelihood-evaluator`` option. By setting to ``test_normal`` we used :py:class:`gwin.likelihood.TestNormal`. To see the list of available likelihood classes run ``pycbc_inference --help``; any choice for ``--likelihood-evaluator`` that starts with ``test_`` is analytic. The other analytic distributions available are: :py:class:`gwin.likelihood.TestEggbox`, :py:class:`gwin.likelihood.TestRosenbrock`, and :py:class:`gwin.likelihood.TestVolcano`. As with ``test_normal``, the dimensionality of these test distributions is set by the number of ``variable_args`` in the configuration file. The ``test_volcano`` distribution must be two dimensional, but all of the other distributions can have any number of dimensions. The configuration file syntax for the other test distributions is the same as in this example. Indeed, with this configuration file one only needs to change the ``--likelihood-evaluator`` argument to try (2D versions of) the other distributions.
+Which analytic distribution is used is set by the ``--likelihood-evaluator`` option. By setting to ``test_normal`` we used :py:class:`gwin.likelihood.TestNormal`. To see the list of available likelihood classes run ``gwin --help``; any choice for ``--likelihood-evaluator`` that starts with ``test_`` is analytic. The other analytic distributions available are: :py:class:`gwin.likelihood.TestEggbox`, :py:class:`gwin.likelihood.TestRosenbrock`, and :py:class:`gwin.likelihood.TestVolcano`. As with ``test_normal``, the dimensionality of these test distributions is set by the number of ``variable_args`` in the configuration file. The ``test_volcano`` distribution must be two dimensional, but all of the other distributions can have any number of dimensions. The configuration file syntax for the other test distributions is the same as in this example. Indeed, with this configuration file one only needs to change the ``--likelihood-evaluator`` argument to try (2D versions of) the other distributions.
 
 ------------------------------
 BBH software injection example
@@ -335,7 +332,7 @@ An example of generating an injection::
         --taper-injection ${TAPER} \
         --disable-spin
 
-An example of running ``pycbc_inference`` to analyze the injection in fake data::
+An example of running ``gwin`` to analyze the injection in fake data::
 
     # injection parameters
     TRIGGER_TIME=1126259462.0
@@ -371,9 +368,9 @@ An example of running ``pycbc_inference`` to analyze the injection in fake data:
     # specifies the number of threads for OpenMP
     # Running with OMP_NUM_THREADS=1 stops lalsimulation
     # to spawn multiple jobs that would otherwise be used
-    # by pycbc_inference and cause a reduced runtime.
+    # by gwin and cause a reduced runtime.
     OMP_NUM_THREADS=1 \
-    pycbc_inference --verbose \
+    gwin --verbose \
         --seed 12 \
         --instruments ${IFOS} \
         --gps-start-time ${GPS_START_TIME} \
@@ -490,9 +487,9 @@ Now run::
     # specifies the number of threads for OpenMP
     # Running with OMP_NUM_THREADS=1 stops lalsimulation
     # to spawn multiple jobs that would otherwise be used
-    # by pycbc_inference and cause a reduced runtime.
+    # by gwin and cause a reduced runtime.
     OMP_NUM_THREADS=1 \
-    pycbc_inference --verbose \
+    gwin --verbose \
         --seed 12 \
         --instruments ${IFOS} \
         --gps-start-time ${GPS_START_TIME} \
@@ -524,54 +521,3 @@ Now run::
         --save-psd \
         --save-stilde \
         --force
-
-----------------------------------------------------
-HDF output file handler (``pycbc.io.InferenceFile``)
-----------------------------------------------------
-
-The executable ``pycbc_inference`` will write a HDF file with all the samples from each walker along with the PSDs and some meta-data about the sampler.
-There is a handler class ``pycbc.io.InferenceFile`` that extends ``h5py.File``.
-To read the output file you can do::
-
-    from pycbc.io import InferenceFile
-    fp = InferenceFile("cbc_example-n1e4.hdf", "r")
-
-To get all samples for ``distance`` from the first walker you can do::
-
-    samples = fp.read_samples("distance", walkers=0)
-    print samples.distance
-
-The function ``InferenceFile.read_samples`` includes the options to thin the samples.
-By default the function will return samples beginning at the end of the burn-in to the last written sample, and will use the autocorrelation length (ACL) calculated by ``pycbc_inference`` to select the indepdedent samples.
-You can supply ``thin_start``, ``thin_end``, and ``thin_interval`` to override this. To read all samples you would do::
-
-    samples = fp.read_samples("distance", walkers=0, thin_start=0, thin_end=-1, thin_interval=1)
-    print samples.distance
-
-Some standard parameters that are derived from the variable arguments (listed via ``fp.variable_args``) can also be retrieved. For example, if ``fp.variable_args`` includes ``mass1`` and ``mass2``, then you can retrieve the chirp mass with::
-
-   samples = fp.read_samples("mchirp")
-   print samples.mchirp
-
-In this case, ``fp.read_samples`` will retrieve ``mass1`` and ``mass2`` (since they are needed to compute chirp mass); ``samples.mchirp`` then returns an array of the chirp mass computed from ``mass1`` and ``mass2``.
-
-For more information, including the list of predefined derived parameters, see :py:class:`pycbc.io.InferenceFile`.
-
-===============================================
-Visualizing the Posteriors
-===============================================
-
-.. toctree::
-   :maxdepth: 1
-
-   inference/viz.rst
-
-===============================================
-Workflows
-=============================================== 
-
-.. toctree::
-   :maxdepth: 1
-
-   workflow/pycbc_make_inference_workflow
-   workflow/pycbc_make_inference_inj_workflow

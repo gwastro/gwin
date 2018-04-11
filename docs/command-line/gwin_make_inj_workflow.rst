@@ -1,12 +1,12 @@
-############################################################################
-``pycbc_make_inference_workflow``: A parameter estimation workflow generator
-############################################################################
+#####################################################################
+``gwin_make_inj_workflow``: A parameter estimation workflow generator
+#####################################################################
 
 ===============
 Introduction
 ===============
 
-The executable ``pycbc_make_inference_inj_workflow`` is a workflow generator to setup a parameter estimation analysis.
+The executable ``gwin_make_inj_workflow`` is a workflow generator to setup a parameter estimation analysis.
 
 ===========================
 Workflow configuration file
@@ -135,7 +135,7 @@ Otherwise if you want to run with simulated data use::
 If you want to run on the loudest triggers from a PyCBC coincident search workflow then run::
 
     # run workflow generator on simulated data
-    pycbc_make_inference_inj_workflow \
+    gwin_make_inj_workflow \
         --workflow-name ${WORKFLOW_NAME} \
         --data-type ${DATA_TYPE} \
         --output-dir output \

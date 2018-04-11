@@ -1,12 +1,12 @@
-############################################################################
-``pycbc_make_inference_workflow``: A parameter estimation workflow generator
-############################################################################
+#################################################################
+``gwin_make_workflow``: A parameter estimation workflow generator
+#################################################################
 
 ===============
 Introduction
 ===============
 
-The executable ``pycbc_make_inference_workflow`` is a workflow generator to setup a parameter estimation analysis.
+The executable ``gwin_make_workflow`` is a workflow generator to setup a parameter estimation analysis.
 
 ===========================
 Workflow configuration file
@@ -251,7 +251,7 @@ Specify a directory to save the HTML pages::
 If you want to run on the loudest triggers from a PyCBC coincident search workflow then run::
 
     # run workflow generator on triggers from workflow
-    pycbc_make_inference_workflow --workflow-name ${WORKFLOW_NAME} \
+    gwin_make_workflow --workflow-name ${WORKFLOW_NAME} \
         --config-files ${CONFIG_PATH} \
         --inference-config-file ${INFERENCE_CONFIG_PATH} \
         --output-dir ${OUTPUT_DIR} \
@@ -272,7 +272,7 @@ Where ``${BANK_FILE}`` is the path to the template bank HDF file, ``${STATMAP_FI
 Else you can run from a specific GPS end time with the ``--gps-end-time`` option like::
 
     # run workflow generator on specific GPS end time
-    pycbc_make_inference_workflow --workflow-name ${WORKFLOW_NAME} \
+    gwin_make_workflow --workflow-name ${WORKFLOW_NAME} \
         --config-files ${CONFIG_PATH} \
         --inference-config-file ${INFERENCE_CONFIG_PATH} \
         --output-dir ${OUTPUT_DIR} \
