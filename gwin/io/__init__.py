@@ -40,11 +40,13 @@ You can supply ``thin_start``, ``thin_end``, and ``thin_interval`` to
 override this.
 To read all samples you would do::
 
-    samples = fp.read_samples("distance", walkers=0, thin_start=0, thin_end=-1, thin_interval=1)
+    samples = fp.read_samples("distance", walkers=0,
+                              thin_start=0, thin_end=-1, thin_interval=1)
     print(samples.distance)
 
 Some standard parameters that are derived from the variable arguments
-(listed via :attr:`fp.variable_args <InferenceFile.variable_args>`) can also be retrieved.
+(listed via :attr:`fp.variable_args <InferenceFile.variable_args>`) can also
+be retrieved.
 For example, if ``fp.variable_args`` includes ``'mass1'`` and ``'mass2'``,
 then you can retrieve the chirp mass with::
 
