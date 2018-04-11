@@ -169,7 +169,7 @@ class InferenceFile(h5py.File):
         """Returns a dictionary of the static_args. The keys are the argument
         names, values are the value they were set to.
         """
-        return {args: self.attrs[arg] for arg in self.attrs["static_args"]}
+        return {arg: self.attrs[arg] for arg in self.attrs["static_args"]}
 
     @property
     def sampling_args(self):
