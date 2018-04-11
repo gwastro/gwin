@@ -31,4 +31,4 @@ clean: Makefile
 # -- build includes from python files -----------------------------------------
 
 _includes/%.rst: _includes/%.py
-	python _includes/$*.py >> $@
+	python _includes/$*.py > $@
