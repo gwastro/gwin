@@ -18,6 +18,8 @@
 import glob
 import os.path
 
+from gwin import __version__ as gwin_version
+
 # -- Project information -----------------------------------------------------
 
 project = u'GWIn'
@@ -25,10 +27,10 @@ copyright = u'2018, Collin Capano'
 author = u'Collin Capano'
 
 # The short X.Y version
-version = u''
-# The full version, including alpha/beta/rc tags
-release = u''
+version = '{0}.{1}'.format(*gwin_version.split('.'))
 
+# The full version, including alpha/beta/rc tags
+release = gwin_version
 
 # -- General configuration ---------------------------------------------------
 
@@ -75,7 +77,7 @@ language = None
 exclude_patterns = [u'_build', 'Thumbs.db', '.DS_Store']
 
 # The name of the Pygments (syntax highlighting) style to use.
-pygments_style = 'sphinx'
+pygments_style = 'monokai'
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
