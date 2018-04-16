@@ -36,13 +36,13 @@ A simple workflow configuration file::
     [executables]
     ; paths to executables to use in workflow
     create_injections = ${which:pycbc_create_injections}
-    inference = ${which:pycbc_inference}
-    inference_intervals = ${which:pycbc_inference_plot_inj_intervals}
-    inference_posterior = ${which:pycbc_inference_plot_posterior}
-    inference_rate = ${which:pycbc_inference_plot_acceptance_rate}
-    inference_recovery = ${which:pycbc_inference_plot_inj_recovery}
-    inference_samples = ${which:pycbc_inference_plot_samples}
-    inference_table = ${which:pycbc_inference_table_summary}
+    inference = ${which:gwin}
+    inference_intervals = ${which:gwin_plot_inj_intervals}
+    inference_posterior = ${which:gwin_plot_posterior}
+    inference_rate = ${which:gwin_plot_acceptance_rate}
+    inference_recovery = ${which:gwin_plot_inj_recovery}
+    inference_samples = ${which:gwin_plot_samples}
+    inference_table = ${which:gwin_table_summary}
     results_page = ${which:pycbc_make_html_page}
 
     [create_injections]
