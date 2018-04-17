@@ -35,3 +35,5 @@ ratings:
 exclude_paths:
 - docs/*
 - tools/*
+- versioneer.py
+- gwin/_version.py
