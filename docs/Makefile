@@ -1,0 +1,37 @@
+# Minimal makefile for Sphinx documentation
+#
+
+# You can set these variables from the command line.
+SPHINXOPTS    =
+SPHINXBUILD   = sphinx-build
+SPHINXPROJ    = GWIn
+SOURCEDIR     = .
+BUILDDIR      = _build
+
+INCLUDES := $(shell ls _includes/*.py)
+
+# Put it first so that "make" without argument is like "make help".
+help:
+	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+
+.PHONY: help html clean apidoc Makefile
+
+# Catch-all target: route all unknown targets to Sphinx using the new
+# "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
+html: Makefile apidoc $(INCLUDES:.py=.rst)
+	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+
+clean: Makefile
+	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+	@$(RM) api/*.rst
+	@for EXRST in $(INCLUDES:.py=.rst); do \
+		$(RM) -f $$EXRST ; \
+	done
+
+apidoc: Makefile
+	@sphinx-apidoc --output-dir api --force --separate ../gwin
+
+# -- build includes from python files -----------------------------------------
+
+_includes/%.rst: _includes/%.py
+	python _includes/$*.py > $@

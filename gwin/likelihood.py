@@ -523,7 +523,7 @@ class TestNormal(BaseLikelihoodEvaluator):
     cov : array-like, optional
         The covariance matrix of the parameters. If None provided, will use
         unit variance for all parameters, with cross-terms set to 0.
-    \**kwargs :
+    **kwargs :
         All other keyword arguments are passed to ``BaseLikelihoodEvaluator``.
 
     """
@@ -565,7 +565,7 @@ class TestEggbox(BaseLikelihoodEvaluator):
     ----------
     variable_args : (tuple of) string(s)
         A tuple of parameter names that will be varied.
-    \**kwargs :
+    **kwargs :
         All other keyword arguments are passed to ``BaseLikelihoodEvaluator``.
 
     """
@@ -599,7 +599,7 @@ class TestRosenbrock(BaseLikelihoodEvaluator):
     ----------
     variable_args : (tuple of) string(s)
         A tuple of parameter names that will be varied.
-    \**kwargs :
+    **kwargs :
         All other keyword arguments are passed to ``BaseLikelihoodEvaluator``.
 
     """
@@ -633,7 +633,7 @@ class TestVolcano(BaseLikelihoodEvaluator):
     ----------
     variable_args : (tuple of) string(s)
         A tuple of parameter names that will be varied. Must have length 2.
-    \**kwargs :
+    **kwargs :
         All other keyword arguments are passed to ``BaseLikelihoodEvaluator``.
 
     """
@@ -750,7 +750,7 @@ class GaussianLikelihood(BaseLikelihoodEvaluator):
         An extra normalization weight to apply to the inner products. Can be
         either a float or an array. If ``None``, ``4*data.values()[0].delta_f``
         will be used.
-    \**kwargs :
+    **kwargs :
         All other keyword arguments are passed to ``BaseLikelihoodEvaluator``.
 
     Examples

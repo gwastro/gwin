@@ -630,7 +630,7 @@ def results_from_cli(opts, load_samples=True, **kwargs):
         and thin_interval specified in the options. The samples are returned
         as a FieldArray instance.
 
-    \**kwargs :
+    **kwargs :
         All other keyword arguments are passed to the InferenceFile's
         read_samples function.
 

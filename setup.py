@@ -65,6 +65,8 @@ except ImportError:  # fall-back to installing lalsuite wheels
 extras_require = {
     'kombine': ['kombine'],
     'emcee': ['emcee'],
+    'docs': ['sphinx >= 1.7.1', 'sphinx_rtd_theme', 'numpydoc',
+             'sphinxcontrib_programoutput'],
 }
 
 tests_require = [

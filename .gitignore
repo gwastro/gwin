@@ -32,6 +32,8 @@ pip-delete-this-directory.txt
 # Sphinx documentation
 /docs/_build
 /docs/_generated
+/docs/api/
+/docs/_includes/*.rst
 
 # OS/editor files
 *.swp
