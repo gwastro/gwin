@@ -177,6 +177,7 @@ def make_inference_prior_plot(workflow, config_file, output_dir,
 
     return node.output_files
 
+
 def make_inference_summary_table(workflow, inference_file, output_dir,
                                  variable_args=None, name="inference_table",
                                  analysis_seg=None, tags=None):

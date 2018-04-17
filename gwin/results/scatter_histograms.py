@@ -40,7 +40,7 @@ import matplotlib
 # This matches the check that matplotlib does internally, but this *may* be
 # version dependenant. If this is a problem then remove this and control from
 # the executables directly.
-if 'matplotlib.backends' not in sys.modules:
+if 'matplotlib.backends' not in sys.modules:  # nopep8
     matplotlib.use('agg')
 
 from matplotlib import (offsetbox, pyplot, gridspec)
@@ -245,7 +245,8 @@ def create_density_plot(xparam, yparam, samples, plot_density=True,
     if ymax is None:
         ymax = ysamples.max()
     npts = 100
-    X, Y = numpy.mgrid[xmin:xmax:complex(0, npts), ymin:ymax:complex(0, npts)] # pylint:disable=invalid-slice-index
+    X, Y = numpy.mgrid[  # pylint:disable=invalid-slice-index
+        xmin:xmax:complex(0, npts), ymin:ymax:complex(0, npts)]
     pos = numpy.vstack([X.ravel(), Y.ravel()])
     if use_kombine:
         Z = numpy.exp(kde(pos.T).reshape(X.shape))

@@ -41,7 +41,7 @@ _global_instance = None
 
 
 def _call_global_likelihood(*args, **kwds):
-    return _global_instance(*args, **kwds) # pylint:disable=not-callable
+    return _global_instance(*args, **kwds)  # pylint:disable=not-callable
 
 
 class _NoPrior(object):
@@ -68,17 +68,19 @@ class BaseLikelihoodEvaluator(object):
 
      * the **noise likelihood**: :math:`p(d|n)`
 
-     * the **likelihood ratio**: :math:`\mathcal{L}(\Theta) = \frac{p(d|\Theta)}{p(d|n)}`
+     * the **likelihood ratio**:
+       :math:`\mathcal{L}(\Theta) = \frac{p(d|\Theta)}{p(d|n)}`
 
      * the **prior**: :math:`p(\Theta)`
 
      * the **posterior**: :math:`p(\Theta|d) \propto p(d|\Theta)p(\Theta)`
 
-     * the **prior-weighted likelihood ratio**: :math:`\hat{\mathcal{L}}(\Theta) = \frac{p(d|\Theta)p(\Theta)}{p(d|n)}`
+     * the **prior-weighted likelihood ratio**:
+       :math:`\hat{\mathcal{L}}(\Theta) = \frac{p(d|\Theta)p(\Theta)}{p(d|n)}`
 
-     * the **SNR**: :math:`\rho(\Theta) = \sqrt{2\log\mathcal{L}(\Theta)}`; for
-       two detectors, this is approximately the same quantity as the coincident
-       SNR used in the CBC search.
+     * the **SNR**: :math:`\rho(\Theta) = \sqrt{2\log\mathcal{L}(\Theta)}`;
+       for two detectors, this is approximately the same quantity as the
+       coincident SNR used in the CBC search.
 
     .. note::
 
@@ -95,7 +97,8 @@ class BaseLikelihoodEvaluator(object):
 
     .. math::
 
-        \log \mathcal{L}(\Theta) = \sum_i \left[\log p(\Theta|d_i) - \log p(n|d_i)\right]
+        \log \mathcal{L}(\Theta) =
+            \sum_i \left[\log p(\Theta|d_i) - \log p(n|d_i)\right]
 
     This class provides boiler-plate methods and attributes for evaluating the
     log likelihood ratio, log prior, and log likelihood. This class
@@ -294,7 +297,8 @@ class BaseLikelihoodEvaluator(object):
 
         .. math::
 
-            p_y(\mathbf{y}) = p_x(\mathbf{x})\left|\mathrm{det}\,\mathbf{J}_{ij}\right|,
+            p_y(\mathbf{y}) =
+                p_x(\mathbf{x})\left|\mathrm{det}\,\mathbf{J}_{ij}\right|,
 
         where :math:`\mathbf{J}_{ij}` is the Jacobian of the inverse transform
         :math:`\mathbf{x} = g(\mathbf{y})`. This has elements:
@@ -556,7 +560,8 @@ class TestEggbox(BaseLikelihoodEvaluator):
 
     .. math::
 
-        \log \mathcal{L}(\Theta) = \left[2+\prod_{i=1}^{n}\cos\left(\frac{\theta_{i}}{2}\right)\right]^{5}
+        \log \mathcal{L}(\Theta) = \left[
+            2+\prod_{i=1}^{n}\cos\left(\frac{\theta_{i}}{2}\right)\right]^{5}
 
     The number of dimensions is set by the number of ``variable_args`` that are
     passed.
@@ -590,7 +595,8 @@ class TestRosenbrock(BaseLikelihoodEvaluator):
 
     .. math::
 
-        \log \mathcal{L}(\Theta) = -\sum_{i=1}^{n-1}[(1-\theta_{i})^{2}+100(\theta_{i+1} - \theta_{i}^{2})^{2}]
+        \log \mathcal{L}(\Theta) = -\sum_{i=1}^{n-1}[
+            (1-\theta_{i})^{2}+100(\theta_{i+1} - \theta_{i}^{2})^{2}]
 
     The number of dimensions is set by the number of ``variable_args`` that are
     passed.
@@ -626,8 +632,10 @@ class TestVolcano(BaseLikelihoodEvaluator):
     r"""The test distribution is a two-dimensional 'volcano' function:
 
     .. math::
-        \Theta = \sqrt{\theta_{1}^{2} + \theta_{2}^{2}}
-        \log \mathcal{L}(\Theta) = 25(e^{\frac{-\Theta}{35}} + \frac{1}{2\sqrt{2\pi}} e^{-\frac{(\Theta-5)^{2}}{8}})
+        \Theta =
+            \sqrt{\theta_{1}^{2} + \theta_{2}^{2}} \log \mathcal{L}(\Theta) =
+            25\left(e^{\frac{-\Theta}{35}} +
+                    \frac{1}{2\sqrt{2\pi}} e^{-\frac{(\Theta-5)^{2}}{8}}\right)
 
     Parameters
     ----------
@@ -678,7 +686,8 @@ class GaussianLikelihood(BaseLikelihoodEvaluator):
 
     .. math::
 
-        \log p(d|\Theta) &= -\frac{1}{2} \sum_i \left<h_i(\Theta) - d_i | h_i(\Theta) - d_i\right> \\
+        \log p(d|\Theta) &=  -\frac{1}{2} \sum_i
+            \left< h_i(\Theta) - d_i | h_i(\Theta) - d_i \right> \\
         \log p(d|n) &= -\frac{1}{2} \sum_i \left<d_i | d_i\right>
 
     where the sum is over the number of detectors, :math:`d_i` is the data in
@@ -687,7 +696,8 @@ class GaussianLikelihood(BaseLikelihoodEvaluator):
 
     .. math::
 
-        \left<a | b\right> = 4\Re \int_{0}^{\infty} \frac{\tilde{a}(f) \tilde{b}(f)}{S_n(f)} \mathrm{d}f,
+        \left<a | b\right> = 4\Re \int_{0}^{\infty}
+            \frac{\tilde{a}(f) \tilde{b}(f)}{S_n(f)} \mathrm{d}f,
 
     where :math:`S_n(f)` is the PSD in the given detector.
 
@@ -697,7 +707,9 @@ class GaussianLikelihood(BaseLikelihoodEvaluator):
 
     .. math::
 
-        \log \hat{\mathcal{L}} = \log p(\Theta) + \sum_i \left[ \left<h_i(\Theta)|d_i\right> - \frac{1}{2} \left<h_i(\Theta)|h_i(\Theta)\right> \right]
+        \log \hat{\mathcal{L}} = \log p(\Theta) + \sum_i \left[
+            \left<h_i(\Theta)|d_i\right> -
+            \frac{1}{2} \left<h_i(\Theta)|h_i(\Theta)\right> \right]
 
     For this reason, by default this class returns ``logplr`` when called as a
     function instead of ``logposterior``. This can be changed via the
@@ -758,35 +770,48 @@ class GaussianLikelihood(BaseLikelihoodEvaluator):
     Create a signal, and set up the likelihood evaluator on that signal:
 
     >>> from pycbc import psd as pypsd
-    >>> from pycbc.waveform.generator import FDomainDetFrameGenerator, FDomainCBCGenerator
+    >>> from pycbc.waveform.generator import (FDomainDetFrameGenerator,
+                                              FDomainCBCGenerator)
     >>> import gwin
     >>> seglen = 4
     >>> sample_rate = 2048
     >>> N = seglen*sample_rate/2+1
     >>> fmin = 30.
-    >>> m1, m2, s1z, s2z, tsig, ra, dec, pol, dist = 38.6, 29.3, 0., 0., 3.1, 1.37, -1.26, 2.76, 3*500.
-    >>> generator = FDomainDetFrameGenerator(FDomainCBCGenerator, 0., variable_args=['tc'], detectors=['H1', 'L1'], delta_f=1./seglen, f_lower=fmin, approximant='SEOBNRv2_ROM_DoubleSpin', mass1=m1, mass2=m2, spin1z=s1z, spin2z=s2z, ra=ra, dec=dec, polarization=pol, distance=dist)
+    >>> m1, m2, s1z, s2z, tsig, ra, dec, pol, dist = (
+            38.6, 29.3, 0., 0., 3.1, 1.37, -1.26, 2.76, 3*500.)
+    >>> generator = FDomainDetFrameGenerator(
+            FDomainCBCGenerator, 0.,
+            variable_args=['tc'], detectors=['H1', 'L1'],
+            delta_f=1./seglen, f_lower=fmin,
+            approximant='SEOBNRv2_ROM_DoubleSpin',
+            mass1=m1, mass2=m2, spin1z=s1z, spin2z=s2z,
+            ra=ra, dec=dec, polarization=pol, distance=dist)
     >>> signal = generator.generate(tc=tsig)
     >>> psd = pypsd.aLIGOZeroDetHighPower(N, 1./seglen, 20.)
     >>> psds = {'H1': psd, 'L1': psd}
-    >>> likelihood_eval = gwin.GaussianLikelihood(['tc'], generator, signal, fmin, psds=psds, return_meta=False)
+    >>> likelihood_eval = gwin.GaussianLikelihood(
+            ['tc'], generator, signal, fmin, psds=psds, return_meta=False)
 
     Now compute the log likelihood ratio and prior-weighted likelihood ratio;
     since we have not provided a prior, these should be equal to each other:
 
-    >>> likelihood_eval.loglr(tc=tsig), likelihood_eval.logplr(tc=tsig)
-        (ArrayWithAligned(277.92945279883855), ArrayWithAligned(277.92945279883855))
+    >>> likelihood_eval.loglr(tc=tsig)
+    ArrayWithAligned(277.92945279883855)
+    >>> likelihood_eval.logplr(tc=tsig)
+    ArrayWithAligned(277.92945279883855)
 
     Compute the log likelihood and log posterior; since we have not
     provided a prior, these should both be equal to zero:
 
-    >>> likelihood_eval.loglikelihood(tc=tsig), likelihood_eval.logposterior(tc=tsig)
-        (ArrayWithAligned(0.0), ArrayWithAligned(0.0))
+    >>> likelihood_eval.loglikelihood(tc=tsig)
+    ArrayWithAligned(0.0)
+    >>> likelihood_eval.logposterior(tc=tsig)
+    ArrayWithAligned(0.0)
 
     Compute the SNR; for this system and PSD, this should be approximately 24:
 
     >>> likelihood_eval.snr([tsig])
-        ArrayWithAligned(23.576660187517593)
+    ArrayWithAligned(23.576660187517593)
 
     Using the same likelihood evaluator, evaluate the log prior-weighted
     likelihood ratio at several points in time, check that the max is at tsig,
@@ -797,10 +822,10 @@ class GaussianLikelihood(BaseLikelihoodEvaluator):
     >>> times = numpy.arange(seglen*sample_rate)/float(sample_rate)
     >>> lls = numpy.array([likelihood_eval([t]) for t in times])
     >>> times[lls.argmax()]
-        3.10009765625
+    3.10009765625
     >>> fig = pyplot.figure(); ax = fig.add_subplot(111)
     >>> ax.plot(times, lls)
-        [<matplotlib.lines.Line2D at 0x1274b5c50>]
+    [<matplotlib.lines.Line2D at 0x1274b5c50>]
     >>> fig.show()
 
     Create a prior and use it (see distributions module for more details):
@@ -808,10 +833,13 @@ class GaussianLikelihood(BaseLikelihoodEvaluator):
     >>> from pycbc import distributions
     >>> uniform_prior = distributions.Uniform(tc=(tsig-0.2,tsig+0.2))
     >>> prior_eval = gwin.JointDistribution(['tc'], uniform_prior)
-    >>> likelihood_eval = gwin.GaussianLikelihood(generator, signal, 20., psds=psds, prior=prior_eval, return_meta=False)
-    >>> likelihood_eval.logplr([tsig]), likelihood_eval.logposterior([tsig])
-        (ArrayWithAligned(278.84574353071264), ArrayWithAligned(0.9162907318741418))
-
+    >>> likelihood_eval = gwin.GaussianLikelihood(
+            generator, signal, 20., psds=psds, prior=prior_eval,
+            return_meta=False)
+    >>> likelihood_eval.logplr([tsig])
+    ArrayWithAligned(278.84574353071264)
+    >>> likelihood_eval.logposterior([tsig])
+    ArrayWithAligned(0.9162907318741418)
     """
     name = 'gaussian'
     required_kwargs = ['waveform_generator', 'data', 'f_lower']
@@ -883,7 +911,9 @@ class GaussianLikelihood(BaseLikelihoodEvaluator):
 
         .. math::
 
-            \log \mathcal{L}(\Theta) = \sum_i \left<h_i(\Theta)|d_i\right> - \frac{1}{2}\left<h_i(\Theta)|h_i(\Theta)\right>,
+            \log \mathcal{L}(\Theta) = \sum_i
+                \left<h_i(\Theta)|d_i\right> -
+                \frac{1}{2}\left<h_i(\Theta)|h_i(\Theta)\right>,
 
         at the given point in parameter space :math:`\Theta`.
 
@@ -927,7 +957,8 @@ class GaussianLikelihood(BaseLikelihoodEvaluator):
 
         .. math::
 
-            p(d|\Theta) = -\frac{1}{2}\sum_i \left<h_i(\Theta) - d_i | h_i(\Theta) - d_i\right>
+            p(d|\Theta) = -\frac{1}{2}\sum_i
+                \left<h_i(\Theta) - d_i | h_i(\Theta) - d_i\right>
 
         Parameters
         ----------
@@ -990,39 +1021,57 @@ class MarginalizedPhaseGaussianLikelihood(GaussianLikelihood):
 
     .. math::
 
-        p(\Theta,\phi|d) &\propto p(\Theta)p(\phi)p(d|\Theta,\phi) \\
-                         &\propto p(\Theta)\frac{1}{2\pi}\exp\left[-\frac{1}{2}\sum_{i}^{N_D} \left<h_i(\Theta,\phi) - d_i, h_i(\Theta,\phi) - d_i\right>\right].
+        p(\Theta,\phi|d)
+            &\propto p(\Theta)p(\phi)p(d|\Theta,\phi) \\
+            &\propto p(\Theta)\frac{1}{2\pi}\exp\left[
+                -\frac{1}{2}\sum_{i}^{N_D} \left<
+                    h_i(\Theta,\phi) - d_i, h_i(\Theta,\phi) - d_i
+                \right>\right].
 
     Here, the sum is over the number of detectors :math:`N_D`, :math:`d_i`
-    and :math:`h_i` are the data and signal in the :math:`i`th detector,
+    and :math:`h_i` are the data and signal in detector :math:`i`,
     respectively, and we have assumed a uniform prior on :math:`phi \in [0,
     2\pi)`. With the form of the signal model given above, the inner product
     in the exponent can be written as:
 
     .. math::
 
-    -\frac{1}{2}\left<h_i - d_i, h_i- d_i\right> &= \left<h_i, d_i\right> - \frac{1}{2}\left<h_i, h_i\right> - \frac{1}{2}\left<d_i, d_i\right> \\
-    &= \Re\left\{O(h^0_i, d_i)e^{-i\phi}\right\} - \frac{1}{2}\left<h^0_i, h^0_i\right> - \frac{1}{2}\left<d_i, d_i\right>,
+        -\frac{1}{2}\left<h_i - d_i, h_i- d_i\right>
+            &= \left<h_i, d_i\right> -
+               \frac{1}{2}\left<h_i, h_i\right> -
+               \frac{1}{2}\left<d_i, d_i\right> \\
+            &= \Re\left\{O(h^0_i, d_i)e^{-i\phi}\right\} -
+               \frac{1}{2}\left<h^0_i, h^0_i\right> -
+               \frac{1}{2}\left<d_i, d_i\right>,
 
     where:
 
     .. math::
 
         h_i^0 &\equiv \tilde{h}_i(f; \Theta, \phi=0); \\
-        O(h^0_i, d_i) &\equiv 4 \int_0^\infty \frac{\tilde{h}_i^*(f; \Theta,0) \tilde{d}_i(f)}{S_n(f)}\mathrm{d}f.
+        O(h^0_i, d_i) &\equiv 4 \int_0^\infty
+            \frac{\tilde{h}_i^*(f; \Theta,0)\tilde{d}_i(f)}{S_n(f)}\mathrm{d}f.
 
     Gathering all of the terms that are not dependent on :math:`\phi` together:
 
     .. math::
 
-        \alpha(\Theta, d) \equiv \exp\left[-\frac{1}{2}\sum_i \left<h^0_i, h^0_i\right> + <d_i, d_i\right>\right],
+        \alpha(\Theta, d) \equiv \exp\left[-\frac{1}{2}\sum_i
+            \left<h^0_i, h^0_i\right> + \left<d_i, d_i\right>\right],
 
     we can marginalize the posterior over :math:`\phi`:
 
     .. math::
 
-        p(\Theta|d) &\propto p(\Theta)\alpha(\Theta,d)\frac{1}{2\pi}\int_{0}^{2\pi}\exp\left[\Re \left\{ e^{-i\phi} \sum_i O(h^0_i, d_i)\right\}\right]\mathrm{d}\phi \\
-        &\propto p(\Theta)\alpha(\Theta, d)\frac{1}{2\pi} \int_{0}^{2\pi}\exp\left[x(\Theta,d)\cos(\phi) + y(\Theta, d)\sin(\phi)\right]\mathrm{d}\phi.
+        p(\Theta|d)
+            &\propto p(\Theta)\alpha(\Theta,d)\frac{1}{2\pi}
+                     \int_{0}^{2\pi}\exp\left[\Re \left\{
+                         e^{-i\phi} \sum_i O(h^0_i, d_i)
+                     \right\}\right]\mathrm{d}\phi \\
+            &\propto p(\Theta)\alpha(\Theta, d)\frac{1}{2\pi}
+                     \int_{0}^{2\pi}\exp\left[
+                         x(\Theta,d)\cos(\phi) + y(\Theta, d)\sin(\phi)
+                     \right]\mathrm{d}\phi.
 
     The integral in the last line is equal to :math:`2\pi I_0(\sqrt{x^2+y^2})`,
     where :math:`I_0` is the modified Bessel function of the first kind. Thus
@@ -1030,7 +1079,10 @@ class MarginalizedPhaseGaussianLikelihood(GaussianLikelihood):
 
     .. math::
 
-        \log p(\Theta|d) \propto \log p(\Theta) + I_0\left(\left|\sum_i O(h^0_i, d_i)\right|\right) - \frac{1}{2}\sum_i\left[ \left<h^0_i, h^0_i\right> - \left<d_i, d_i\right> \right]
+        \log p(\Theta|d) \propto \log p(\Theta) +
+            I_0\left(\left|\sum_i O(h^0_i, d_i)\right|\right) -
+            \frac{1}{2}\sum_i\left[ \left<h^0_i, h^0_i\right> -
+                                    \left<d_i, d_i\right> \right]
 
     This class computes the above expression for the log likelihood.
     """
@@ -1041,7 +1093,9 @@ class MarginalizedPhaseGaussianLikelihood(GaussianLikelihood):
 
         .. math::
 
-            \log \mathcal{L}(\Theta) = I_0\left(\left|\sum_i O(h^0_i, d_i)\right|\right) - \frac{1}{2}\left<h^0_i, h^0_i\right>,
+            \log \mathcal{L}(\Theta) =
+                I_0 \left(\left|\sum_i O(h^0_i, d_i)\right|\right) -
+                \frac{1}{2}\left<h^0_i, h^0_i\right>,
 
         at the given point in parameter space :math:`\Theta`.
 
@@ -1087,6 +1141,7 @@ likelihood_evaluators = {cls.name: cls for cls in (
     MarginalizedPhaseGaussianLikelihood,
 )}
 
-__all__ = ['BaseLikelihoodEvaluator', 'TestNormal', 'TestEggbox',
-           'TestVolcano', 'TestRosenbrock', 'GaussianLikelihood',
+__all__ = ['BaseLikelihoodEvaluator',
+           'TestNormal', 'TestEggbox', 'TestVolcano', 'TestRosenbrock',
+           'GaussianLikelihood', 'MarginalizedPhaseGaussianLikelihood',
            'likelihood_evaluators']
