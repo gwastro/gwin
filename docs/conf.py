@@ -200,9 +200,24 @@ autosummary_generate = True
 numpydoc_use_blockquotes = True
 
 
-# -- setup --------------------------------------------------------------------
+# -- run sphinx-apidoc automatically ------------------------------------------
+# this is required to have apidoc generated as part of readthedocs builds
+# see https://github.com/rtfd/readthedocs.org/issues/1139
 
-def setup(app):
+def run_apidoc(_):
+    """Call sphinx-apidoc
+    """
+    from sphinx.ext.apidoc import main as apidoc_main
+    curdir = os.path.abspath(os.path.dirname(__file__))
+    apidir = os.path.join(curdir, 'api')
+    module = os.path.join(curdir, os.path.pardir, 'gwin')
+    apidoc_main([module, '--separate', '--force', '--output-dir', apidir])
+
+
+# -- add static files----------------------------------------------------------
+
+def setup_static_content(app):
+    # configure stylesheets
     for sdir in html_static_path:
         # add stylesheets
         cssdir = os.path.join(sdir, 'css')
@@ -213,3 +228,10 @@ def setup(app):
         jsdir = os.path.join(sdir, 'js')
         for jsf in glob.glob(os.path.join(jsdir, '*.js')):
             app.add_javascript(jsf.split(os.path.sep, 1)[1])
+
+
+# -- setup --------------------------------------------------------------------
+
+def setup(app):
+    setup_static_content(app)
+    app.connect('builder-inited', run_apidoc)
