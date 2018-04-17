@@ -15,6 +15,13 @@ Welcome to GWIn's documentation!
 
    io/index
 
+Full module documentation is available at:
+
+.. toctree::
+   :maxdepth: 2
+
+   api/gwin
+
 ---------------------------
 Running on the command line
 ---------------------------
@@ -33,4 +40,5 @@ Indices and tables
 ==================
 
 * :ref:`genindex`
+* :ref:`modindex`
 * :ref:`search`
