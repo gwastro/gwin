@@ -3,3 +3,5 @@ include LICENSE
 include MANIFEST.in
 include README.rst
 include test/
+include versioneer.py
+include gwin/_version.py
