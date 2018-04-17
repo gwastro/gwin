@@ -18,7 +18,7 @@ help:
 
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
-html: Makefile $(INCLUDES:.py=.rst)
+html: Makefile
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 clean: Makefile
@@ -27,8 +27,3 @@ clean: Makefile
 	@for EXRST in $(INCLUDES:.py=.rst); do \
 		$(RM) -f $$EXRST ; \
 	done
-
-# -- build includes from python files -----------------------------------------
-
-_includes/%.rst: _includes/%.py
-	python _includes/$*.py > $@

@@ -17,6 +17,10 @@
 
 import glob
 import os.path
+import subprocess
+import sys
+
+from sphinx.util import logging
 
 from gwin import __version__ as gwin_version
 
@@ -230,8 +234,25 @@ def setup_static_content(app):
             app.add_javascript(jsf.split(os.path.sep, 1)[1])
 
 
+# -- build _includes ----------------------------------------------------------
+
+def build_includes(app):
+    """Build extra include files from _includes dir
+    """
+    logger = logging.getLogger('includes')
+    curdir = os.path.abspath(os.path.dirname(__file__))
+    incdir = os.path.join(curdir, '_includes')
+    for pyf in glob.glob(os.path.join(curdir, '_includes', '*.py')):
+        rstfile = pyf.replace('.py', '.rst')
+        logger.info('generating {0} from {1}'.format(rstfile, pyf))
+        rst = subprocess.check_output([sys.executable, pyf])
+        with open(rstfile, 'w') as f:
+            f.write(rst)
+
+
 # -- setup --------------------------------------------------------------------
 
 def setup(app):
     setup_static_content(app)
     app.connect('builder-inited', run_apidoc)
+    app.connect('builder-inited', build_includes)
