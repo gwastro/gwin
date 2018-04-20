@@ -14,11 +14,11 @@ INCLUDES := $(shell ls _includes/*.py)
 help:
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
-.PHONY: help html clean apidoc Makefile
+.PHONY: help html clean Makefile
 
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
-html: Makefile apidoc $(INCLUDES:.py=.rst)
+html: Makefile
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 clean: Makefile
@@ -27,11 +27,3 @@ clean: Makefile
 	@for EXRST in $(INCLUDES:.py=.rst); do \
 		$(RM) -f $$EXRST ; \
 	done
-
-apidoc: Makefile
-	@sphinx-apidoc --output-dir api --force --separate ../gwin
-
-# -- build includes from python files -----------------------------------------
-
-_includes/%.rst: _includes/%.py
-	python _includes/$*.py > $@

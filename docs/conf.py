@@ -17,6 +17,10 @@
 
 import glob
 import os.path
+import subprocess
+import sys
+
+from sphinx.util import logging
 
 from gwin import __version__ as gwin_version
 
@@ -200,9 +204,24 @@ autosummary_generate = True
 numpydoc_use_blockquotes = True
 
 
-# -- setup --------------------------------------------------------------------
+# -- run sphinx-apidoc automatically ------------------------------------------
+# this is required to have apidoc generated as part of readthedocs builds
+# see https://github.com/rtfd/readthedocs.org/issues/1139
 
-def setup(app):
+def run_apidoc(_):
+    """Call sphinx-apidoc
+    """
+    from sphinx.ext.apidoc import main as apidoc_main
+    curdir = os.path.abspath(os.path.dirname(__file__))
+    apidir = os.path.join(curdir, 'api')
+    module = os.path.join(curdir, os.path.pardir, 'gwin')
+    apidoc_main([module, '--separate', '--force', '--output-dir', apidir])
+
+
+# -- add static files----------------------------------------------------------
+
+def setup_static_content(app):
+    # configure stylesheets
     for sdir in html_static_path:
         # add stylesheets
         cssdir = os.path.join(sdir, 'css')
@@ -213,3 +232,27 @@ def setup(app):
         jsdir = os.path.join(sdir, 'js')
         for jsf in glob.glob(os.path.join(jsdir, '*.js')):
             app.add_javascript(jsf.split(os.path.sep, 1)[1])
+
+
+# -- build _includes ----------------------------------------------------------
+
+def build_includes(app):
+    """Build extra include files from _includes dir
+    """
+    logger = logging.getLogger('includes')
+    curdir = os.path.abspath(os.path.dirname(__file__))
+    incdir = os.path.join(curdir, '_includes')
+    for pyf in glob.glob(os.path.join(curdir, '_includes', '*.py')):
+        rstfile = pyf.replace('.py', '.rst')
+        logger.info('generating {0} from {1}'.format(rstfile, pyf))
+        rst = subprocess.check_output([sys.executable, pyf])
+        with open(rstfile, 'w') as f:
+            f.write(rst)
+
+
+# -- setup --------------------------------------------------------------------
+
+def setup(app):
+    setup_static_content(app)
+    app.connect('builder-inited', run_apidoc)
+    app.connect('builder-inited', build_includes)
