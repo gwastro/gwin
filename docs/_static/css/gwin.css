@@ -7,6 +7,10 @@ pre {
 		font-size: 14px !important;
 }
 
+div[class^='highlight'] {
+		background-color: #272822;
+}
+
 code,
 .rst-content code {
 		border: none;
