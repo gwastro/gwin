@@ -2,7 +2,7 @@ A python package for Bayesian Inference of gravitational-wave experimental data.
 
 |PyPI| |Versions| |License|
 
-|TravisCI| |CodeClimate| |Coveralls|
+|TravisCI| |LatestDocs| |CodeClimate| |Coveralls|
 
 Installation
 =============
@@ -25,6 +25,9 @@ Installation
 .. |TravisCI| image:: https://travis-ci.org/gwastro/gwin.svg?branch=master
    :target: https://travis-ci.org/gwastro/gwin
    :alt: Travis CI Status
+.. |LatestDocs| image:: https://readthedocs.org/projects/gwin/badge/?version=latest
+   :target: http://gwin.readthedocs.io/en/latest/?badge=latest
+   :alt: Documentation Status
 .. |CodeClimate| image:: https://api.codeclimate.com/v1/badges/587c69254181d6564068/maintainability
    :target: https://codeclimate.com/github/gwastro/gwin/maintainability
    :alt: Maintainability
