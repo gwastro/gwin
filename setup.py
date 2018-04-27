@@ -26,21 +26,12 @@ import sys
 
 from setuptools import (setup, find_packages)
 
+import versioneer
 
 # -- versioning ---------------------------------------------------------------
 
-# get version
-def find_version(path):
-    with open(path, 'r') as fp:
-        version_file = fp.read()
-    version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]",
-                              version_file, re.M)
-    if version_match:
-        return version_match.group(1)
-    raise RuntimeError("Unable to find version string.")
-
-
-__version__ = find_version(os.path.join('gwin', '__init__.py'))
+cmdclass = versioneer.get_cmdclass()
+__version__ = versioneer.get_version()
 
 # -- dependencies -------------------------------------------------------------
 
@@ -105,6 +96,7 @@ setup(
     author_email='collin.capano@ligo.org',
     url='https://github.com/gwastro/gwin',
     license='GPLv3',
+    cmdclass=cmdclass,
     packages=find_packages(),
     scripts=find_scripts(),
     setup_requires=setup_requires,
