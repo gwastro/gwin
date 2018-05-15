@@ -26,12 +26,15 @@ from matplotlib import pyplot as plt
 
 from pycbc import results
 
+from gwin import __version__
 from gwin.io.hdf import InferenceFile
 
 # command line usage
 parser = argparse.ArgumentParser(
             usage="pycbc_inference_plot_acceptance_rate [--options]",
             description="Plots histogram of the fractions of steps accepted by walkers.")
+parser.add_argument('--version', action='version', version=__version__,
+                    help='show version number and exit')
 
 # add data options
 parser.add_argument("--input-file", type=str, required=True,

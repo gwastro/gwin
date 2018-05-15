@@ -18,11 +18,13 @@ from matplotlib import pyplot as plt
 import pycbc
 from pycbc.results import save_fig_with_metadata
 
-from gwin import option_utils
+from gwin import (__version__, option_utils)
 
 # parse command line
 parser = argparse.ArgumentParser(usage=__file__ + " [--options]",
                                  description=__doc__)
+parser.add_argument('--version', action='version', version=__version__,
+                    help='show version number and exit')
 parser.add_argument("--output-file", required=True, type=str,
                     help="Path to save output plot.")
 parser.add_argument("--verbose", action="store_true",

@@ -35,12 +35,14 @@ import numpy
 
 import pycbc
 
-from gwin import option_utils
+from gwin import (__version__, option_utils)
 from gwin.io.hdf import InferenceFile
 from gwin.io.txt import InferenceTXTFile
 
 parser = argparse.ArgumentParser(description=__doc__)
 
+parser.add_argument('-V', '--version', action='version', version=__version__,
+                    help='show version number and exit')
 parser.add_argument("--output-file", type=str, required=True,
                     help="Output file to create.")
 parser.add_argument("--force", action="store_true", default=False,

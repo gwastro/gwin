@@ -22,7 +22,6 @@ import argparse
 import logging
 import os
 import Pegasus.DAX3 as dax
-import pycbc.version
 import socket
 import sys
 from pycbc.results import layout
@@ -31,8 +30,9 @@ from pycbc.results import versioning
 from pycbc.workflow import configuration
 from pycbc.workflow import core
 from pycbc.workflow import jobsetup
-from gwin import workflow as gwin_workflow
 from pycbc.workflow import plotting
+
+from gwin import (__version__, workflow as gwin_workflow)
 
 # set command line parser
 parser = argparse.ArgumentParser(description=__doc__[1:])
@@ -40,7 +40,7 @@ parser = argparse.ArgumentParser(description=__doc__[1:])
 # version option
 parser.add_argument(
     "--version", action="version",
-    version=pycbc.version.git_verbose_msg, 
+    version=__version__,
     help="Prints version information.")
 
 # workflow options

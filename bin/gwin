@@ -26,13 +26,12 @@ import shutil
 import numpy
 
 import pycbc
-import pycbc.version
 from pycbc import (calibration, distributions, transforms, fft, gate,
                    opt, psd, scheme, strain, weave)
 from pycbc.waveform import generator
 
 import gwin
-from gwin import (burn_in, option_utils)
+from gwin import (__version__, burn_in, option_utils)
 from gwin.io.hdf import InferenceFile
 from gwin.option_utils import validate_checkpoint_files
 
@@ -41,8 +40,7 @@ parser = argparse.ArgumentParser(usage=__file__ + " [--options]",
                                  description=__doc__)
 
 # version option
-parser.add_argument("--version", action="version",
-                    version=pycbc.version.git_verbose_msg,
+parser.add_argument("--version", action="version", version=__version__,
                     help="Prints version information.")
 
 # add data options

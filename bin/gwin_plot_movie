@@ -41,7 +41,7 @@ from matplotlib import pyplot
 import pycbc.results
 from pycbc import transforms
 
-from gwin import option_utils
+from gwin import (__version__, option_utils)
 from gwin.results.scatter_histograms import (create_multidim_plot,
                                              get_scale_fac)
 
@@ -93,6 +93,8 @@ def integer_logspace(start, end, num):
 
 parser = argparse.ArgumentParser()
 
+parser.add_argument("--version", action="version", version=__version__,
+                    help="show version number and exit")
 parser.add_argument("--input-file", type=str, required=True,
                     help="Results file path.")
 parser.add_argument("--start-sample", type=int, default=1,

@@ -20,10 +20,9 @@
 import argparse
 import logging
 from pycbc import results
-from gwin import gelman_rubin
-from gwin import option_utils
 import matplotlib.pyplot as plt
 import sys
+from gwin import (__version__, gelman_rubin, option_utils)
 
 # command line usage
 parser = argparse.ArgumentParser(usage=__file__ + " [--options]",
@@ -32,6 +31,8 @@ parser = argparse.ArgumentParser(usage=__file__ + " [--options]",
 # verbose option
 parser.add_argument("--verbose", action="store_true", default=False,
                     help="Print logging info.")
+parser.add_argument('--version', action='version', version=__version__,
+                    help='show version number and exit')
 
 # output options
 parser.add_argument("--output-file", type=str, required=True,

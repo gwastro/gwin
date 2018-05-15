@@ -24,10 +24,8 @@ import logging
 import os
 import Pegasus.DAX3 as dax
 import pycbc.workflow as wf
-import gwin.workflow as inffu
 import pycbc.workflow.minifollowups as mini
 import pycbc.workflow.pegasus_workflow as wdax
-import pycbc.version
 import socket
 import sys
 from pycbc_glue import segments
@@ -36,6 +34,9 @@ from pycbc.results import layout
 from pycbc.types import MultiDetOptionAction
 from pycbc.types import MultiDetOptionAppendAction
 from pycbc.workflow import WorkflowConfigParser
+
+from gwin import (__version__, workflow as inffu)
+
 
 def to_file(path, ifo=None):
     """ Takes a str and returns a pycbc.workflow.pegasus_workflow.File
@@ -61,8 +62,7 @@ def symlink_path(f, path):
 parser = argparse.ArgumentParser(description=__doc__[1:])
 
 # version option
-parser.add_argument("--version", action="version",
-                    version=pycbc.version.git_verbose_msg, 
+parser.add_argument("--version", action="version", version=__version__,
                     help="Prints version information.")
 
 # workflow options
