@@ -3,10 +3,16 @@ version: "2"
 checks:
   argument-count:
     config:
-      threshold: 5
+      threshold: 10
   file-lines:
     config:
       threshold: 500
+  method-count:
+    config:
+      threshold: 50
+  method-lines:
+    config:
+      threshold: 100
 
 plugins:
   duplication:
