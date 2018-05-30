@@ -13,8 +13,6 @@ checks:
   method-lines:
     config:
       threshold: 100
-  method-complexity:
-    enabled:  false
 
 plugins:
   duplication:
