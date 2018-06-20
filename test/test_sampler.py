@@ -98,12 +98,12 @@ class TestSamplers(_TestBase):
         return distributions.JointDistribution(parameters, *prior_dists)
 
     @pytest.fixture
-    def likelihood_eval(self, fd_waveform_generator, fd_waveform, prior_eval,
+    def likelihood_eval(self, fd_waveform, fd_waveform_generator, prior_eval,
                         zdhp_psd, request):
         eval_class = likelihood.likelihood_evaluators[request.param]
         return eval_class(
             fd_waveform_generator.variable_args,
-            fd_waveform_generator, fd_waveform,
+            fd_waveform, fd_waveform_generator,
             self.fmin, psds={ifo: zdhp_psd for ifo in self.ifos},
             prior=prior_eval, return_meta=False)
 

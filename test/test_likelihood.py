@@ -93,15 +93,15 @@ class TestGaussianLikelihood(TestBaseLikelihoodEvaluator):
     TEST_CLASS = gwin_likelihood.GaussianLikelihood
 
     @pytest.fixture(scope='function')
-    def simple(self, fd_waveform_generator, random_data):
+    def simple(self, random_data, fd_waveform_generator):
         data = {ifo: random_data for ifo in self.ifos}
-        return self.TEST_CLASS([], waveform_generator=fd_waveform_generator,
-                               data=data, f_lower=self.fmin)
+        return self.TEST_CLASS([], data, fd_waveform_generator,
+                               f_lower=self.fmin)
 
     @pytest.fixture(scope='function')
-    def full(self, fd_waveform_generator, fd_waveform, zdhp_psd):
+    def full(self, fd_waveform, fd_waveform_generator, zdhp_psd):
         return self.TEST_CLASS(
-            ['tc'], fd_waveform_generator, fd_waveform, self.fmin,
+            ['tc'], fd_waveform, fd_waveform_generator, self.fmin,
             psds={ifo: zdhp_psd for ifo in self.ifos}, return_meta=False)
 
     @pytest.mark.parametrize('callfunc', ['logplr', 'logposterior'])

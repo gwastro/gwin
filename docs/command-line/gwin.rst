@@ -44,8 +44,6 @@ A complete list of samplers is given in ``gwin --help``.
 These samplers are described in :py:class:`gwin.sampler.KombineSampler`, :py:class:`gwin.sampler.EmceeEnsembleSampler`, and :py:class:`gwin.sampler.EmceePTSampler`.
 In addition to ``--sampler`` the user will need to specify the number of walkers to use ``--nwalkers``, and for parallel-tempered samplers the number of temperatures ``--ntemps``. You also need to either specify the number of iterations to run for using ``--niterations`` **or** the number of independent samples to collect using ``--n-independent-samples``. For the latter, a burn-in function must be specified using ``--burn-in-function``. In this case, the program will run until the sampler has burned in, at which point the number of independent samples equals the number of walkers. If the number of independent samples desired is greater than the number of walkers, the program will continue to run until it has collected the specified number of independent samples (to do this, an autocorrelation length is computed at each checkpoint to determine how many iterations need to be skipped to obtain independent samples).
 
-The user specifies the likelihood model on the command line with the ``--likelihood-evaluator`` option. Any choice that starts with ``test_`` is an analytic test distribution that requires no data or waveform generation; see the section below on running on an analytic distribution for more details. For running on data, use ``--likelihood-evaluator gaussian``; this uses :py:class:`gwin.likelihood.GaussianLikelihood` for evaluating posteriors. Examples of using this on a BBH injection and on GW150914 are given below.
-
 The user specifies a configuration file that defines the priors with the ``--config-files`` option.
 The syntax of the configuration file is described in the following subsection.
 
@@ -54,8 +52,24 @@ Configuration file syntax
 -------------------------
 
 Configuration files follow the ``ConfigParser`` syntax.
-There are two required sections.
-One is a ``[variable_args]`` section that contains a list of parameters that we will vary to obtain a posterior distribution and the other is ``[static_args]`` section that contains a list of parameters are held fixed through out the run.
+There are three required sections.
+
+One is a ``[likelihood]`` section that contains the name of the likelihood class
+to use for evaluating the posterior. An example::
+
+    [likelihood]
+    name = gaussian
+
+In this case, the :py:class:`gwin.likelihood.GaussianLikelihood` would be used.
+Examples of using this likelihood class on a BBH injection and on GW150914 are
+given below. Any name that starts with ``test_`` is an analytic test
+distribution that requires no data or waveform generation; see the section
+below on running on an analytic distribution for more details.
+
+The other two required sections are ``[variable_args]``, and ``[static_args]``.
+The ``[variable_args]`` section contains a list of parameters that will be
+varied to obtain a posterior distribution. The ``[static_args]`` section
+contains a list of parameters that are held fixed through out the run.
 
 Each parameter in ``[variable_args]`` must have a subsection in ``[prior]``.
 To create a subsection use the ``-`` char, e.g. for one of the mass parameters do ``[prior-mass1]``.
@@ -117,6 +131,9 @@ Several analytic distributions are available to run tests on. These can be run q
 
 This example demonstrates how to sample a 2D normal distribution with the ``emcee`` sampler. First, create the following configuration file (named ``normal2d.ini``)::
 
+    [likelihood]
+    name = test_normal
+
     [variable_args]
     x =
     y =
@@ -138,8 +155,7 @@ Then run::
         --output-file normal2d.hdf \
         --sampler emcee \
         --niterations 100 \
-        --nwalkers 5000 \
-        --likelihood-evaluator test_normal
+        --nwalkers 5000
 
 This will run the ``emcee`` sampler on the 2D analytic normal distribution with 5000 walkers for 100 iterations.
 
@@ -173,7 +189,20 @@ To make a movie showing how the walkers evolved, run::
 
 The number of dimensions of the distribution is set by the number of ``variable_args`` in the configuration file. The names of the ``variable_args`` do not matter, just that the prior sections use the same names (in this example ``x`` and ``y`` were used, but ``foo`` and ``bar`` would be equally valid). A higher (or lower) dimensional distribution can be tested by simply adding more (or less) ``variable_args``.
 
-Which analytic distribution is used is set by the ``--likelihood-evaluator`` option. By setting to ``test_normal`` we used :py:class:`gwin.likelihood.TestNormal`. To see the list of available likelihood classes run ``gwin --help``; any choice for ``--likelihood-evaluator`` that starts with ``test_`` is analytic. The other analytic distributions available are: :py:class:`gwin.likelihood.TestEggbox`, :py:class:`gwin.likelihood.TestRosenbrock`, and :py:class:`gwin.likelihood.TestVolcano`. As with ``test_normal``, the dimensionality of these test distributions is set by the number of ``variable_args`` in the configuration file. The ``test_volcano`` distribution must be two dimensional, but all of the other distributions can have any number of dimensions. The configuration file syntax for the other test distributions is the same as in this example. Indeed, with this configuration file one only needs to change the ``--likelihood-evaluator`` argument to try (2D versions of) the other distributions.
+Which analytic distribution is used is set by the ``[likelihood]`` section in
+the configuration file. By setting to ``test_normal`` we used
+:py:class:`gwin.likelihood.TestNormal`. The other analytic distributions available
+are: :py:class:`gwin.likelihood.TestEggbox`,
+:py:class:`gwin.likelihood.TestRosenbrock`, and
+:py:class:`gwin.likelihood.TestVolcano`. As with ``test_normal``, the
+dimensionality of these test distributions is set by the number of
+``variable_args`` in the configuration file. The ``test_volcano`` distribution
+must be two dimensional, but all of the other distributions can have any number
+of dimensions. The configuration file syntax for the other test distributions
+is the same as in this example (aside from the name used in the
+likelihood section). Indeed, with this configuration file one only
+needs to change the ``name`` argument in ``[likelihood]`` argument to try (2D versions of)
+the other distributions.
 
 ------------------------------
 BBH software injection example
@@ -182,6 +211,9 @@ BBH software injection example
 This example recovers the parameters of a precessing binary black-hole (BBH).
 
 An example configuration file (named ``gwin.ini``) is::
+
+    [likelihood]
+    name = gaussian
 
     [variable_args]
     ; waveform parameters that will vary in MCMC
@@ -210,8 +242,8 @@ An example configuration file (named ``gwin.ini``) is::
     [prior-tc]
     ; coalescence time prior
     name = uniform
-    min-tc = 1126259461.8
-    max-tc = 1126259462.2
+    min-tc = 1126259462.32
+    max-tc = 1126259462.52
 
     [prior-mass1]
     name = uniform
@@ -278,65 +310,50 @@ An example configuration file (named ``gwin.ini``) is::
     ; outputs mchirp, q
     name = mass1_mass2_to_mchirp_q
 
-An example of generating an injection::
+To generate an injection we will use ``pycbc_create_injections``. This program
+takes a configuration file to set up the distributions from which to draw the
+injection parameters (run ``pycbc_create_injections --help`` for details). The
+syntax of that file is the same as the file used for ``gwin``, so we could, if
+we wished, simply give the above configuartion file to
+``pycbc_create_injections``. However, to ensure we obtain a specific set of
+parameters, we will create another configuration file that fixes the injection
+parameters to specific values. Create the following file, calling it
+``injection.ini``::
 
-    # define waveform parameters
-    TRIGGER_TIME=1126259462.0
-    INJ_APPROX=SEOBNRv2threePointFivePN
-    MASS1=37.
-    MASS2=32.
-    RA=2.21535724066
-    DEC=-1.23649695537
-    INC=2.5
-    COA_PHASE=1.5
-    POLARIZATION=1.75
-    DISTANCE=100000 # in kpc
-    INJ_F_MIN=18.
-    TAPER="start"
+    [variable_args]
 
-    # path of injection file that will be created in the example
-    INJ_PATH=injection.xml.gz
+    [static_args]
+    tc = 1126259462.420
+    mass1 = 37
+    mass2 = 32
+    ra = 2.2
+    dec = -1.25
+    inclincation = 2.5
+    coa_phase = 1.5
+    polarization = 1.75
+    distance = 100
+    f_ref = 20
+    f_lower = 18
+    approximant = IMRPhenomPv2
+    taper = start
 
-    # lalapps_inspinj requires degrees on the command line
-    LONGITUDE=`python -c "import numpy; print ${RA} * 180/numpy.pi"`
-    LATITUDE=`python -c "import numpy; print ${DEC} * 180/numpy.pi"`
-    INC=`python -c "import numpy; print ${INC} * 180/numpy.pi"`
-    POLARIZATION=`python -c "import numpy; print ${POLARIZATION} * 180/numpy.pi"`
-    COA_PHASE=`python -c "import numpy; print ${COA_PHASE} * 180/numpy.pi"`
+This will create a non-spinning injection (if no spin parameters are provided,
+the injection will be non-spinning by default) using ``IMRPhenomPv2``. (Note
+that we still need a ``[variable_args]`` section even though we are fixing all
+parameters.) Now run::
 
-    # create injection file
-    lalapps_inspinj \
-        --output ${INJ_PATH} \
-        --seed 1000 \
-        --f-lower ${INJ_F_MIN} \
-        --waveform ${INJ_APPROX} \
-        --amp-order 7 \
-        --gps-start-time ${TRIGGER_TIME} \
-        --gps-end-time ${TRIGGER_TIME} \
-        --time-step 1 \
-        --t-distr fixed \
-        --l-distr fixed \
-        --longitude ${LONGITUDE} \
-        --latitude ${LATITUDE} \
-        --d-distr uniform \
-        --min-distance ${DISTANCE} \
-        --max-distance ${DISTANCE} \
-        --i-distr fixed \
-        --fixed-inc ${INC} \
-        --coa-phase-distr fixed \
-        --fixed-coa-phase ${COA_PHASE} \
-        --polarization ${POLARIZATION} \
-        --m-distr fixMasses \
-        --fixed-mass1 ${MASS1} \
-        --fixed-mass2 ${MASS2} \
-        --taper-injection ${TAPER} \
-        --disable-spin
+    pycbc_create_injections --verbose \
+        --config-files injection.ini \
+        --ninjections 1 \
+        --output-file injection.hdf
 
-An example of running ``gwin`` to analyze the injection in fake data::
+This will create a file called ``injection.hdf`` which contains the injection's
+parameters. This file can be passed to ``gwin`` with the ``--injection-file``
+option. To run ``gwin`` on this injection in simulated fake data, set the
+following bash variables::
 
     # injection parameters
-    TRIGGER_TIME=1126259462.0
-    INJ_PATH=injection.xml.gz
+    TRIGGER_TIME_INT=1126259462
 
     # sampler parameters
     CONFIG_PATH=gwin.ini
@@ -357,17 +374,16 @@ An example of running ``gwin`` to analyze the injection in fake data::
     # your computer's capabilities
     NPROCS=12
 
-    # get coalescence time as an integer
-    TRIGGER_TIME_INT=${TRIGGER_TIME%.*}
-
     # start and end time of data to read in
     GPS_START_TIME=$((${TRIGGER_TIME_INT} - ${SEGLEN}))
     GPS_END_TIME=$((${TRIGGER_TIME_INT} + ${SEGLEN}))
 
+Now run::
+
     # run sampler
     # specifies the number of threads for OpenMP
     # Running with OMP_NUM_THREADS=1 stops lalsimulation
-    # to spawn multiple jobs that would otherwise be used
+    # from spawning multiple jobs that would otherwise be used
     # by gwin and cause a reduced runtime.
     OMP_NUM_THREADS=1 \
     gwin --verbose \
@@ -383,14 +399,13 @@ An example of running ``gwin`` to analyze the injection in fake data::
         --sample-rate ${SAMPLE_RATE} \
         --low-frequency-cutoff ${F_MIN} \
         --channel-name H1:FOOBAR L1:FOOBAR \
-        --injection-file ${INJ_PATH} \
+        --injection-file injection.hdf \
         --config-file ${CONFIG_PATH} \
         --output-file ${OUTPUT_PATH} \
         --processing-scheme ${PROCESSING_SCHEME} \
         --sampler kombine \
         --burn-in-function max_posterior \
         --update-interval ${N_UPDATE} \
-        --likelihood-evaluator gaussian \
         --nwalkers ${N_WALKERS} \
         --n-independent-samples ${N_SAMPLES} \
         --checkpoint-interval ${N_CHECKPOINT} \
@@ -400,20 +415,29 @@ An example of running ``gwin`` to analyze the injection in fake data::
         --save-stilde \
         --force
 
+While the code is running it will write results to ``gwin.hdf.checkpoint``
+after every checkpoint interval (you'll see ``Writing results to file`` when a
+checkpoint occurs), with a backup kept in ``gwin.hdf.bkup``. At each
+checkpoint, the number of independent samples that have been obtained to that
+point will be computed. If the number of independent samples is greater than or
+equal to ``n-independent-samples``, the code will finish and exit. Upon
+finishing, ``gwin.hdf.checkpoint`` will be renamed to ``gwin.hdf``, and
+``gwin.hdf.bkup`` will be deleted.
+
+If the job fails for any reason while running (say your computer loses power)
+you can resume from the last checkpoint by re-running the same command as
+above, but adding ``--resume-from-checkpoint``. In this case, the code will
+automatically detect the checkpoint file, and pickup from where it last left
+off.
+
 ----------------
 GW150914 example
 ----------------
 
-With a minor change to the ``tc`` prior, you can reuse ``gwin.ini`` from the previous example to analyze the data containing GW150914. Change the ``[prior-tc]`` section to::
-
-    [prior-tc]
-    ; coalescence time prior
-    name = uniform
-    min-tc = 1126259462.32
-    max-tc = 1126259462.52
-
-Next, you need to obtain the real LIGO data containing GW150914. Do one of
-the following:
+The configuration file ``gwin.ini`` used for the above injection is the same
+as what you need to analyze the data containing GW150914. You only need to
+change the command-line arguments to ``gwin`` to point it to the correct data.
+To do that, do one of the following:
 
 * **If you are a LIGO member and are running on a LIGO Data Grid cluster:**
   you can use the LIGO data server to automatically obtain the frame files.
@@ -512,7 +536,6 @@ Now run::
         --sampler kombine \
         --burn-in-function max_posterior \
         --update-interval ${N_UPDATE} \
-        --likelihood-evaluator gaussian \
         --nwalkers ${N_WALKERS} \
         --n-independent-samples ${N_SAMPLES} \
         --checkpoint-interval ${N_CHECKPOINT} \
@@ -521,3 +544,9 @@ Now run::
         --save-psd \
         --save-stilde \
         --force
+
+As discussed in the injection example above, the code will write results to
+``gwin.hdf.checkpoint`` at every checkpoint interval, and will continue to run
+until it has obtained at least as many independent samples as specified by
+``n-independent-samples``.  When this happens, ``gwin.hdf.checkpoint`` will be
+moved to ``gwin.hdf`` and the code will exit.

@@ -59,19 +59,25 @@ A simple workflow configuration file::
     [inference]
     ; command line options use --help for more information
     sample-rate = 2048
-    low-frequency-cutoff = 30
-    strain-high-pass = 20
+    low-frequency-cutoff = 20
+    strain-high-pass = 15
     pad-data = 8
     psd-estimation = median
     psd-segment-length = 16
     psd-segment-stride = 8
     psd-inverse-length = 16
-    processing-scheme = mkl
+    processing-scheme = cpu
+    checkpoint-interval = 1000
     sampler = kombine
-    likelihood-evaluator = gaussian
-    nwalkers = 500
-    niterations = 100000
+    nwalkers = 5000
+    update-interval = 500
+    n-independent-samples = 5000
+    burn-in-function = max_poseterior
     save-psd =
+    save-strain =
+    save-stilde =
+    nprocesses = 12
+    resume-from-checkpoint =
 
     [pegasus_profile-inference]
     ; pegasus profile for inference nodes
@@ -108,6 +114,9 @@ Inference configuration file
 ============================
 
 You will also need a configuration file with sections that tells ``pycbc_inference`` how to construct the priors. A simple inference configuration file is::
+
+    [likelihood]
+    name = gaussian
 
     [variable_args]
     ; parameters to vary in inference sampler
@@ -170,6 +179,9 @@ You will also need a configuration file with sections that tells ``pycbc_inferen
 
 A simple configuration file for parameter estimation on the ringdown is::
 
+    [likelihood]
+    name = gaussian
+
     [variable_args]
     ; parameters to vary in inference sampler
     tc =
@@ -177,14 +189,6 @@ A simple configuration file for parameter estimation on the ringdown is::
     tau =
     amp =
     phi =
-
-    [labels]
-    ; LaTeX expressions to use in HTML and plotting executables
-    tc = $t_c$
-    f_0 = $f_0$
-    tau = $\tau$
-    amp = $A$
-    phi = $\phi_0$
 
     [static_args]
     ; parameters that do not vary in inference sampler
@@ -221,9 +225,7 @@ A simple configuration file for parameter estimation on the ringdown is::
 
     [prior-phi]
     ; how to construct prior distribution
-    name = uniform
-    min-phi = 0
-    max-phi = 6.283185307179586
+    name = uniform_angle
 
 If you want to use another variable parameter in the inference sampler then add its name to ``[variable_args]`` and add a prior section like shown above.
 
@@ -301,5 +303,6 @@ Finally plan and submit the workflow with::
 
     # submit workflow
     pycbc_submit_dax --dax ${WORKFLOW_NAME}.dax \
-        --accounting-group ligo.dev.o2.cbc.explore.test
+        --accounting-group ligo.dev.o3.cbc.explore.test \
+        --enable-shared-filesystem
 

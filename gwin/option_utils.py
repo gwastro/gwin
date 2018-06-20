@@ -41,22 +41,6 @@ from gwin.io.txt import InferenceTXTFile
 #
 # -----------------------------------------------------------------------------
 
-def convert_liststring_to_list(lstring):
-    """Checks if an argument of the configuration file is a string of a list
-    and returns the corresponding list (of strings).
-
-    The argument is considered to be a list if it starts with '[' and ends
-    with ']'. List elements should be comma separated. For example, passing
-    `'[foo bar, cat]'` will result in `['foo bar', 'cat']` being returned. If
-    the argument does not start and end with '[' and ']', the argument will
-    just be returned as is.
-    """
-    if lstring[0] == '[' and lstring[-1] == ']':
-        lstring = [str(lstring[1:-1].split(',')[n].strip().strip("'")) for
-                   n in range(len(lstring[1:-1].split(',')))]
-    return lstring
-
-
 def add_config_opts_to_parser(parser):
     """Adds options for the configuration files to the given parser.
     """
@@ -81,144 +65,6 @@ def config_parser_from_cli(opts):
     else:
         overrides = None
     return WorkflowConfigParser(opts.config_files, overrides)
-
-
-def read_args_from_config(cp, section_group=None, prior_section='prior'):
-    """Given an open config file, loads the static and variable arguments to
-    use in the parameter estmation run.
-
-    Parameters
-    ----------
-    cp : WorkflowConfigParser
-        An open config parser to read from.
-    section_group : {None, str}
-        When reading the config file, only read from sections that begin with
-        `{section_group}_`. For example, if `section_group='foo'`, the
-        variable arguments will be retrieved from section
-        `[foo_variable_args]`. If None, no prefix will be appended to section
-        names.
-    prior_section : str, optional
-        Check that priors exist in the given section. Default is 'prior.'
-
-    Returns
-    -------
-    variable_args : list
-        The names of the parameters to vary in the PE run.
-    static_args : dict
-        Dictionary of names -> values giving the parameters to keep fixed.
-    """
-    logging.info("Loading arguments")
-    if section_group is not None:
-        section_prefix = '{}_'.format(section_group)
-    else:
-        section_prefix = ''
-
-    # sanity check that each parameter in [variable_args] has a priors section
-    variable_args = cp.options("{}variable_args".format(section_prefix))
-    subsections = cp.get_subsections("{}{}".format(section_prefix,
-                                                   prior_section))
-    tags = set([p for tag in subsections for p in tag.split('+')])
-    missing_prior = set(variable_args) - tags
-    if any(missing_prior):
-        raise KeyError("You are missing a priors section in the config file "
-                       "for parameter(s): {}".format(', '.join(missing_prior)))
-
-    # get parameters that do not change in sampler
-    try:
-        static_args = {
-            key: cp.get_opt_tags(
-                "{}static_args".format(section_prefix), key, [])
-            for key in cp.options("{}static_args".format(section_prefix))}
-    except ConfigParser.NoSectionError:
-        static_args = {}
-    # try converting values to float
-    for key, val in static_args.iteritems():
-        try:
-            # the following will raise a ValueError if it cannot be cast to
-            # float (as we would expect for string arguments)
-            static_args[key] = float(val)
-        except ValueError:
-            # try converting to a list of strings; this function will just
-            # return val if it does not begin (end) with [ (])
-            static_args[key] = convert_liststring_to_list(val)
-
-    # get additional constraints to apply in prior
-    cons = []
-    section = "{}constraint".format(section_prefix)
-    for subsection in cp.get_subsections(section):
-        name = cp.get_opt_tag(section, "name", subsection)
-        constraint_arg = cp.get_opt_tag(section, "constraint_arg", subsection)
-        kwargs = {}
-        for key in cp.options(section + "-" + subsection):
-            if key in ["name", "constraint_arg"]:
-                continue
-            val = cp.get_opt_tag(section, key, subsection)
-            if key == "required_parameters":
-                kwargs["required_parameters"] = val.split(
-                    bounded.VARARGS_DELIM)
-                continue
-            try:
-                val = float(val)
-            except ValueError:
-                pass
-            kwargs[key] = val
-        cons.append(constraints.constraints[name](variable_args,
-                                                  constraint_arg, **kwargs))
-
-    return variable_args, static_args, cons
-
-
-def read_sampling_args_from_config(cp, section_group=None,
-                                   section='sampling_parameters'):
-    """Reads sampling parameters from the given config file.
-
-    Parameters are read from the `[({section_group}_){section}]` section.
-    The options should list the variable args to transform; the parameters they
-    point to should list the parameters they are to be transformed to for
-    sampling. If a multiple parameters are transformed together, they should
-    be comma separated. Example:
-
-    .. code-block:: ini
-
-        [sampling_parameters]
-        mass1, mass2 = mchirp, logitq
-        spin1_a = logitspin1_a
-
-    Note that only the final sampling parameters should be listed, even if
-    multiple intermediate transforms are needed. (In the above example, a
-    transform is needed to go from mass1, mass2 to mchirp, q, then another one
-    needed to go from q to logitq.) These transforms should be specified
-    in separate sections; see `transforms.read_transforms_from_config` for
-    details.
-
-    Parameters
-    ----------
-    cp : WorkflowConfigParser
-        An open config parser to read from.
-    section_group : str, optional
-        Append `{section_group}_` to the section name. Default is None.
-    section : str, optional
-        The name of the section. Default is 'sampling_parameters'.
-
-    Returns
-    -------
-    sampling_params : list
-        The list of sampling parameters to use instead.
-    replaced_params : list
-        The list of variable args to replace in the sampler.
-    """
-    if section_group is not None:
-        section_prefix = '{}_'.format(section_group)
-    else:
-        section_prefix = ''
-    section = section_prefix + section
-    replaced_params = set()
-    sampling_params = set()
-    for args in cp.options(section):
-        map_args = cp.get(section, args)
-        sampling_params.update(set(map(str.strip, map_args.split(','))))
-        replaced_params.update(set(map(str.strip, args.split(','))))
-    return list(sampling_params), list(replaced_params)
 
 
 # -----------------------------------------------------------------------------
@@ -435,7 +281,8 @@ def low_frequency_cutoff_from_cli(opts):
     # FIXME: this just uses the same frequency cutoff for every instrument for
     # now. We should allow for different frequency cutoffs to be used; that
     # will require (minor) changes to the Likelihood class
-    return {ifo: opts.low_frequency_cutoff for ifo in opts.instruments}
+    instruments = opts.instruments if opts.instruments is not None else []
+    return {ifo: opts.low_frequency_cutoff for ifo in instruments}
 
 
 def data_from_cli(opts):
@@ -462,7 +309,8 @@ def data_from_cli(opts):
     psd_gates = psd_gates_from_cli(opts)
 
     # get strain time series
-    strain_dict = strain_from_cli_multi_ifos(opts, opts.instruments,
+    instruments = opts.instruments if opts.instruments is not None else []
+    strain_dict = strain_from_cli_multi_ifos(opts, instruments,
                                              precision="double")
     # apply gates if not waiting to overwhiten
     if not opts.gate_overwhitened:
@@ -478,7 +326,7 @@ def data_from_cli(opts):
         psd_opts.gps_start_time = psd_opts.psd_start_time
         psd_opts.gps_end_time = psd_opts.psd_end_time
         psd_strain_dict = strain_from_cli_multi_ifos(psd_opts,
-                                                     opts.instruments,
+                                                     instruments,
                                                      precision="double")
         # apply any gates
         logging.info("Applying gates to PSD data")
@@ -496,7 +344,7 @@ def data_from_cli(opts):
     length_dict = {}
     delta_f_dict = {}
     low_frequency_cutoff_dict = low_frequency_cutoff_from_cli(opts)
-    for ifo in opts.instruments:
+    for ifo in instruments:
         stilde_dict[ifo] = strain_dict[ifo].to_frequencyseries()
         length_dict[ifo] = len(stilde_dict[ifo])
         delta_f_dict[ifo] = stilde_dict[ifo].delta_f
@@ -504,7 +352,7 @@ def data_from_cli(opts):
     # get PSD as frequency series
     psd_dict = psd_from_cli_multi_ifos(
         opts, length_dict, delta_f_dict, low_frequency_cutoff_dict,
-        opts.instruments, strain_dict=psd_strain_dict, precision="double")
+        instruments, strain_dict=psd_strain_dict, precision="double")
 
     # apply any gates to overwhitened data, if desired
     if opts.gate_overwhitened and opts.gate is not None:

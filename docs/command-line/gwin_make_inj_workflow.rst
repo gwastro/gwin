@@ -52,21 +52,25 @@ A simple workflow configuration file::
 
     [inference]
     ; command line options use --help for more information
-    processing-scheme = mkl
+    processing-scheme = cpu
     sampler = kombine
-    likelihood-evaluator = gaussian
-    nwalkers = 100
-    n-independent-samples = 10
-    checkpoint-interval = 10
+    nwalkers = 5000
+    checkpoint-interval = 1000
+    n-independent-samples = 5000
+    update-interval = 500
+    burn-in-function = max_posterior
     nprocesses = 24
     fake-strain = aLIGOZeroDetHighPower
     psd-model = aLIGOZeroDetHighPower
     pad-data = 8
-    strain-high-pass = 20
-    sample-rate = 1024
-    low-frequency-cutoff = 30
-    update-interval = 5
+    strain-high-pass = 15
+    sample-rate = 2048
+    low-frequency-cutoff = 20
     config-overrides = static_args:approximant:TaylorF2
+    save-psd =
+    save-strain =
+    save-stilde =
+    resmume-from-checkpoint =
 
     [pegasus_profile-inference]
     ; pegasus profile for inference nodes
@@ -132,22 +136,6 @@ Otherwise if you want to run with simulated data use::
     # option for using simulated data
     DATA_TYPE=simulated_data
 
-If you want to run on the loudest triggers from a PyCBC coincident search workflow then run::
-
-    # run workflow generator on simulated data
-    gwin_make_inj_workflow \
-        --workflow-name ${WORKFLOW_NAME} \
-        --data-type ${DATA_TYPE} \
-        --output-dir output \
-        --output-file ${WORKFLOW_NAME}.dax \
-        --inference-config-file ${INFERENCE_CONFIG_PATH} \
-        --config-files ${CONFIG_PATH} \
-        --config-overrides results_page:output-path:${HTML_DIR} \
-                           workflow:start-time:${GPS_START_TIME} \
-                           workflow:end-time:${GPS_END_TIME}
-
-Where ``${GPS_START_TIME}`` and ``${GPS_END_TIME}`` are the GPS times of data to read.
-
 =============================
 Plan and execute the workflow
 =============================
@@ -156,5 +144,6 @@ Finally plan and submit the workflow with::
 
     # submit workflow
     pycbc_submit_dax --dax ${WORKFLOW_NAME}.dax \
-        --accounting-group ligo.dev.o2.cbc.explore.test
+        --accounting-group ligo.dev.o3.cbc.explore.test \
+        --enable-shared-filesystem
 

@@ -2,6 +2,9 @@
 
 # Calcualate a quick analytic likelihood parameter estimation
 cat > ana_inf.ini <<EOL
+[likelihood]
+name = test_normal
+
 [variable_args]
 x =
 y =
@@ -22,7 +25,6 @@ RESULT=`pycbc_inference --verbose \
     --output-file ana_inf.hdf \
     --sampler emcee \
     --niterations 100 \
-    --nwalkers 500 \
-    --likelihood-evaluator test_normal`
+    --nwalkers 500`
 
 exit ${RESULT}

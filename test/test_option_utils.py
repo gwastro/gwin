@@ -29,6 +29,7 @@ from gwin import option_utils
 from gwin.io.hdf import InferenceFile
 from gwin.io.txt import InferenceTXTFile
 from gwin.sampler import samplers as SAMPLERS
+from gwin import likelihood
 
 from utils import mock
 from utils.core import tempfile_with_content
@@ -39,6 +40,9 @@ TEST_CONFIGURATION = """
 [test]
 a = 1
 b = 2
+
+[likelihood]
+name = gaussian
 
 [variable_args]
 mass1 =
@@ -75,16 +79,6 @@ def config(scope='function'):
     _base = os.path.basename(cfo.name)
     if os.path.exists(_base):
         os.unlink(os.path.basename(_base))
-
-
-@pytest.mark.parametrize('input_, output', [
-    ('test', 'test'),
-    ('a, b, c', 'a, b, c'),
-    ('[foo, bar, cat]', ['foo', 'bar', 'cat']),
-    ('[foo bar, cat]', ['foo bar', 'cat']),
-])
-def test_convert_liststring_to_list(input_, output):
-    assert option_utils.convert_liststring_to_list(input_) == output
 
 
 def test_add_config_opts_to_parser():
@@ -127,36 +121,13 @@ def test_config_parser_from_cli(overrides):
         assert config.get(sec, opt) == val
 
 
-def test_read_args_from_config(config):
-    # no priors should raise an error
-    with pytest.raises(KeyError) as exc:
-        option_utils.read_args_from_config(config)
-    assert 'mass2' in str(exc.value)
-
-    # add prior section for mass2
-    config.add_section('prior-mass2')
-
-    # now parse again
-    vargs, sargs, cons = option_utils.read_args_from_config(config)
-
-    # and check values
-    assert vargs == ['mass1', 'mass2']
-    assert sargs == {'ra': 0., 'dec': 0., 'extra': ['1', '2', '3']}
-    assert isinstance(cons[0], MtotalLT)
-
-    # check that no [static_args] is ok
-    config.remove_section('static_args')
-    _, sargs, _ = option_utils.read_args_from_config(config)
-    assert sargs == {}
-
-
 @pytest.mark.parametrize('prefix, out1, out2', [
     (None, {'logitspin1_a', 'mchirp', 'logitq'},
      {'mass1', 'mass2', 'spin1_a'}),
     ('test', {'c', 'd'}, {'a', 'b'}),
 ])
 def test_read_sampling_args_from_config(config, prefix, out1, out2):
-    spars, rpars = option_utils.read_sampling_args_from_config(
+    spars, rpars = likelihood.read_sampling_args_from_config(
         config, section_group=prefix)
     assert spars == list(out1)
     assert rpars == list(out2)

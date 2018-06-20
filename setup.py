@@ -41,7 +41,7 @@ if set(('test',)).intersection(sys.argv):
 
 install_requires = [
     'numpy',
-    'pycbc',
+    'pycbc>=1.10.1',
     'matplotlib',
     'scipy',
     'h5py',

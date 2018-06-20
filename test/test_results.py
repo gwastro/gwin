@@ -98,6 +98,7 @@ def test_get_scale_factor(width, height, scale):
     pytest.param(True, marks=skip_no_kombine),
 ])
 def test_construct_kde(kombine):
+    numpy.random.seed(0)
     samples = numpy.random.rand(5, 5)
 
     if kombine is None:
