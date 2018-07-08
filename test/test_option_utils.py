@@ -127,7 +127,7 @@ def test_config_parser_from_cli(overrides):
     ('test', {'c', 'd'}, {'a', 'b'}),
 ])
 def test_read_sampling_args_from_config(config, prefix, out1, out2):
-    spars, rpars = likelihood.read_sampling_args_from_config(
+    spars, rpars = likelihood.base.read_sampling_args_from_config(
         config, section_group=prefix)
     assert spars == list(out1)
     assert rpars == list(out2)

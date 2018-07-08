@@ -25,7 +25,7 @@ from utils import _TestBase
 
 
 class TestNoPrior(object):
-    TEST_CLASS = gwin_likelihood._NoPrior
+    TEST_CLASS = gwin_likelihood.base._NoPrior
 
     def test_apply_boundary_conditions(self):
         p = self.TEST_CLASS()
@@ -37,7 +37,7 @@ class TestNoPrior(object):
 
 
 class TestBaseLikelihoodEvaluator(_TestBase):
-    TEST_CLASS = gwin_likelihood.BaseLikelihoodEvaluator
+    TEST_CLASS = gwin_likelihood.base.BaseLikelihoodEvaluator
 
     @classmethod
     def setup_class(cls):
@@ -51,7 +51,7 @@ class TestBaseLikelihoodEvaluator(_TestBase):
 
     def test_defaults(self, simple):
         assert simple.variable_args is tuple()
-        assert isinstance(simple._prior, gwin_likelihood._NoPrior)
+        assert isinstance(simple._prior, gwin_likelihood.base._NoPrior)
 
     @pytest.mark.parametrize('transforms, params, result', [
         (None, {}, 0.),  # defaults

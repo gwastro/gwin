@@ -27,8 +27,8 @@ from pycbc.workflow import (ConfigParser, WorkflowConfigParser)
 from pycbc.pool import choose_pool
 from pycbc.psd import from_cli_multi_ifos as psd_from_cli_multi_ifos
 from pycbc.strain import from_cli_multi_ifos as strain_from_cli_multi_ifos
-from pycbc.gate import (gates_from_cli, psd_gates_from_cli, apply_gates_to_td,
-                        apply_gates_to_fd)
+from pycbc.strain import (gates_from_cli, psd_gates_from_cli,
+                          apply_gates_to_td, apply_gates_to_fd)
 
 from gwin import (burn_in, likelihood, sampler)
 from gwin.io.hdf import InferenceFile, check_integrity

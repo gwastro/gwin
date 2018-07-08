@@ -26,7 +26,7 @@ import shutil
 import numpy
 
 import pycbc
-from pycbc import (calibration, distributions, transforms, fft, gate,
+from pycbc import (distributions, transforms, fft,
                    opt, psd, scheme, strain, weave)
 from pycbc.waveform import generator
 
@@ -114,7 +114,7 @@ psd.insert_psd_option_group_multi_ifo(parser)
 scheme.insert_processing_option_group(parser)
 strain.insert_strain_option_group_multi_ifo(parser)
 weave.insert_weave_option_group(parser)
-gate.add_gate_option_group(parser)
+strain.add_gate_option_group(parser)
 
 # parse command line
 opts = parser.parse_args()
@@ -201,12 +201,12 @@ with ctx:
     # get ifo-specific instances of calibration model
     if cp.has_section('calibration'):
         logging.info("Initializing calibration model")
-        recalib = {ifo : calibration.read_model_from_config(cp, ifo) for
+        recalib = {ifo : strain.read_model_from_config(cp, ifo) for
                    ifo in opts.instruments}
         likelihood_args['recalib'] = recalib
 
     # get gates for templates
-    gates = gate.gates_from_cli(opts)
+    gates = strain.gates_from_cli(opts)
     if gates:
         likelihood_args['gates'] = gates
 
