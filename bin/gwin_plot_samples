@@ -76,7 +76,7 @@ for i, arg in enumerate(parameters):
 
         # plot each walker as a different line on the subplot
         file_parameters, cs = transforms.get_common_cbc_transforms(
-                                                 parameters, fp.variable_args)
+                                                 parameters, fp.variable_params)
         y = fp.read_samples(file_parameters, walkers=j,
                             thin_start=opts.thin_start,
                             thin_interval=opts.thin_interval,

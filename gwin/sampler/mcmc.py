@@ -46,12 +46,12 @@ class MCMCSampler(BaseMCMCSampler):
 
     Parameters
     ----------
-    likelihood_evaluator : LikelihoodEvaluator
-        An instance of a gwin.likelihood evaluator.
+    model : Model
+        A model from ``gwin.models``.
     """
     name = "mcmc"
 
-    def __init__(self, likelihood_evaluator):
+    def __init__(self, model):
         self._chain = []
         self._blobs = []
         # Using p0 to store the last sample would require to store separately
@@ -60,16 +60,16 @@ class MCMCSampler(BaseMCMCSampler):
         self._lastblob = []
         sampler = self
         # initialize
-        super(MCMCSampler, self).__init__(sampler, likelihood_evaluator)
+        super(MCMCSampler, self).__init__(sampler, model)
         self.dtype = numpy.dtype([(name, None) for name in
-                                  ('lnpost',) + self.sampling_args])
+                                  ('lnpost',) + self.sampling_params])
         # Harcoding the number of walkers to 1.
         # nwalkers should not be a BaseMCMCSampler property.
         self._nwalkers = 1
 
     @classmethod
-    def from_cli(cls, opts, likelihood_evaluator, pool=None,
-                 likelihood_call=None):
+    def from_cli(cls, opts, model, pool=None,
+                 model_call=None):
         """Create an instance of this sampler from the given command-line
         options.
 
@@ -77,27 +77,27 @@ class MCMCSampler(BaseMCMCSampler):
         ----------
         opts : ArgumentParser options
             The options to parse.
-        likelihood_evaluator : LikelihoodEvaluator
-            The likelihood evaluator to use with the sampler.
+        model : Model
+            A model from ``gwin.models``.
 
         Returns
         -------
         MCMCSampler
             A MCMC sampler initialized based on the given arguments.
         """
-        return cls(likelihood_evaluator)
+        return cls(model)
 
     @property
     def chain(self):
         """This function should return the past samples as a
         [additional dimensions x] niterations x ndim array, where ndim are the
-        number of sampling args, niterations the number of iterations, and
+        number of sampling params, niterations the number of iterations, and
         additional dimensions are any additional dimensions used by the
         sampler (e.g, walkers, temperatures).
         """
         # Adding the nwalkers dimention, and converting to an ndarray.
-        return self._chain[list(self.sampling_args)].view(numpy.float).reshape(
-            (1,) + self._chain.shape + (-1,))
+        return self._chain[list(self.sampling_params)].view(
+            numpy.float).reshape((1,) + self._chain.shape + (-1,))
         # Copy needed to avoid numpy 1.13 warning
 
     @property
@@ -145,11 +145,11 @@ class MCMCSampler(BaseMCMCSampler):
         if not self._lastsample:
             # first time running, use the initial positions
             # set_p0() was called in pycbc_inference, so self.p0 is set
-            result = self.likelihood_evaluator(self.p0)
+            result = self.model(self.p0)
             try:
                 logplr, blob = result
             except TypeError:
-                # likelihood evaluator doesn't return blobs
+                # model doesn't return blobs
                 logplr = result
                 blob = None
 
@@ -172,20 +172,20 @@ class MCMCSampler(BaseMCMCSampler):
         for i in range(start, niterations-1):
 
             logplr_old = self._chain['lnpost'][i]
-            # As _chain is a structured numpy array and self.sampling_args is a
-            # tuple, a list() conversion is needed here.
+            # As _chain is a structured numpy array and self.sampling_params is
+            # a tuple, a list() conversion is needed here.
             # This is not ideal being in the inner loop.
-            samples = self._chain[list(self.sampling_args)][i]
+            samples = self._chain[list(self.sampling_params)][i]
 
             # Dummy proposal
             samples_prop = [sample + numpy.random.normal(loc=0.0, scale=1.0)
                             for sample in samples]
 
-            result = self.likelihood_evaluator(samples_prop)
+            result = self.model(samples_prop)
             try:
                 logplr_prop, blob = result
             except TypeError:
-                # likelihood evaluator doesn't return blobs
+                # model doesn't return blobs
                 logplr_prop = result
                 blob = None
 

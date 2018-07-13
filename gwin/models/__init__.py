@@ -21,21 +21,21 @@ assuming various noise models.
 
 
 from .analytic import (TestEggbox, TestNormal, TestRosenbrock, TestVolcano)
-from .gaussian_noise import (GaussianLikelihood,
-                             MarginalizedPhaseGaussianLikelihood)
+from .gaussian_noise import (GaussianNoise,
+                             MarginalizedPhaseGaussianNoise)
 
 
-# Used to manage a likelihood instance across multiple cores or MPI
+# Used to manage a model instance across multiple cores or MPI
 _global_instance = None
 
 
-def _call_global_likelihood(*args, **kwds):
-    """Private function for global likelihood (needed for parallelization)."""
+def _call_global_model(*args, **kwds):
+    """Private function for global model (needed for parallelization)."""
     return _global_instance(*args, **kwds)  # pylint:disable=not-callable
 
 
-def read_from_config(cp, section="likelihood", **kwargs):
-    """Initializes a ``LikelihoodEvaluator`` from the given config file.
+def read_from_config(cp, section="model", **kwargs):
+    """Initializes a model from the given config file.
 
     The section must have a ``name`` argument. The name argument corresponds to
     the name of the class to initialize.
@@ -45,7 +45,7 @@ def read_from_config(cp, section="likelihood", **kwargs):
     cp : WorkflowConfigParser
         Config file parser to read.
     section : str, optional
-        The section to read. Default is "likelihood".
+        The section to read. Default is "model".
     \**kwargs :
         All other keyword arguments are passed to the ``from_config`` method
         of the class specified by the name argument.
@@ -53,19 +53,19 @@ def read_from_config(cp, section="likelihood", **kwargs):
     Returns
     -------
     cls
-        The initialized ``LikelihoodEvaluator``.
+        The initialized model.
     """
     # use the name to get the distribution
     name = cp.get(section, "name")
-    return likelihood_evaluators[name].from_config(
+    return models[name].from_config(
         cp, section=section, **kwargs)
 
 
-likelihood_evaluators = {_cls.name: _cls for _cls in (
+models = {_cls.name: _cls for _cls in (
     TestEggbox,
     TestNormal,
     TestRosenbrock,
     TestVolcano,
-    GaussianLikelihood,
-    MarginalizedPhaseGaussianLikelihood,
+    GaussianNoise,
+    MarginalizedPhaseGaussianNoise,
 )}

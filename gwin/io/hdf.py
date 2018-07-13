@@ -95,7 +95,7 @@ class _PosteriorOnlyParser(object):
     def n_independent_samples(cls, fp):
         """Returns the number of independent samples stored in the file.
         """
-        return cls.read_samples(fp, fp.variable_args[0]).size
+        return cls.read_samples(fp, fp.variable_params[0]).size
 
 
 class InferenceFile(h5py.File):
@@ -111,7 +111,7 @@ class InferenceFile(h5py.File):
     """
     name = "hdf"
     samples_group = 'samples'
-    stats_group = 'likelihood_stats'
+    stats_group = 'model_stats'
     sampler_group = 'sampler_states'
 
     def __init__(self, path, mode=None, **kwargs):
@@ -149,38 +149,38 @@ class InferenceFile(h5py.File):
             return self.sampler_class
 
     @property
-    def likelihood_eval_name(self):
-        """Returns the name of the likelihood evaluator that was used."""
-        return self.attrs["likelihood_evaluator"]
+    def model_name(self):
+        """Returns the name of the model that was used."""
+        return self.attrs["model"]
 
     @property
-    def variable_args(self):
-        """Returns list of variable_args.
+    def variable_params(self):
+        """Returns list of variable_params.
 
         Returns
         -------
-        variable_args : {list, str}
-            List of str that contain variable_args keys.
+        variable_params : {list, str}
+            List of str that contain variable_params keys.
         """
-        return self.attrs["variable_args"]
+        return self.attrs["variable_params"]
 
     @property
-    def static_args(self):
-        """Returns a dictionary of the static_args. The keys are the argument
+    def static_params(self):
+        """Returns a dictionary of the static_params. The keys are the argument
         names, values are the value they were set to.
         """
-        return {arg: self.attrs[arg] for arg in self.attrs["static_args"]}
+        return {arg: self.attrs[arg] for arg in self.attrs["static_params"]}
 
     @property
-    def sampling_args(self):
+    def sampling_params(self):
         """Returns the parameters that were used to sample.
 
         Returns
         -------
-        sampling_args : {list, str}
-            List of the sampling args.
+        sampling_params : {list, str}
+            List of the sampling params.
         """
-        return self.attrs["sampling_args"]
+        return self.attrs["sampling_params"]
 
     @property
     def lognl(self):
@@ -312,20 +312,20 @@ class InferenceFile(h5py.File):
                                                 samples_group=samples_group,
                                                 **kwargs)
 
-    def read_likelihood_stats(self, **kwargs):
-        """Reads likelihood stats from self.
+    def read_model_stats(self, **kwargs):
+        """Reads model stats from self.
 
         Parameters
         -----------
         **kwargs :
             The keyword args are passed to the sampler's
-            `read_likelihood_stats` method.
+            ``read_model_stats`` method.
 
         Returns
         -------
         stats : {FieldArray, None}
             Likelihood stats in the file, as a FieldArray. The fields of the
-            array are the names of the stats that are in the `likelihood_stats`
+            array are the names of the stats that are in the ``model_stats``
             group.
         """
         parameters = self[self.stats_group].keys()
@@ -689,7 +689,7 @@ class InferenceFile(h5py.File):
             should map parameter -> parameter name. If None, will just use the
             original parameter names.
         posterior_only : bool, optional
-            Write the samples and likelihood stats as flattened arrays, and
+            Write the samples and model stats as flattened arrays, and
             set other's posterior_only attribute. For example, if this file
             has a parameter's samples written to
             `{samples_group}/{param}/walker{x}`, then other will have all of
@@ -716,10 +716,10 @@ class InferenceFile(h5py.File):
         # select the samples to copy
         logging.info("Reading samples to copy")
         if parameters is None:
-            parameters = self.variable_args
-        # if list of desired parameters is different, rename variable args
-        if set(parameters) != set(self.variable_args):
-            other.attrs['variable_args'] = parameters
+            parameters = self.variable_params
+        # if list of desired parameters is different, rename model params
+        if set(parameters) != set(self.variable_params):
+            other.attrs['variable_params'] = parameters
         # if only the posterior is desired, we'll flatten the results
         if not posterior_only and not self.posterior_only:
             kwargs['flatten'] = False
@@ -731,13 +731,13 @@ class InferenceFile(h5py.File):
             arrs.update({p: samples[p] for p in parameters if
                          p not in parameter_names})
             samples = FieldArray.from_kwargs(**arrs)
-            other.attrs['variable_args'] = samples.fieldnames
+            other.attrs['variable_params'] = samples.fieldnames
         logging.info("Writing samples")
         other.samples_parser.write_samples_group(other, self.samples_group,
                                                  samples.fieldnames, samples)
-        # do the same for the likelihood stats
+        # do the same for the model stats
         logging.info("Reading stats to copy")
-        stats = self.read_likelihood_stats(**kwargs)
+        stats = self.read_model_stats(**kwargs)
         logging.info("Writing stats")
         other.samples_parser.write_samples_group(other, self.stats_group,
                                                  stats.fieldnames, stats)

@@ -19,9 +19,10 @@ using Bayesian Inference.
 """
 
 from ._version import get_versions
-from .likelihood import *
-from .sampler import *
-from .burn_in import *
+import io
+import models
+import sampler
+import burn_in
 
 __author__ = 'Collin Capano <collin capano@ligo.org>'
 __version__ = get_versions()['version']

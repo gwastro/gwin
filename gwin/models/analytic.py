@@ -14,26 +14,26 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 """
-This modules provides likelihood classes that have analytic solutions for the
+This modules provides models that have analytic solutions for the
 log likelihood.
 """
 
 import numpy
 from scipy import stats
 
-from .base import BaseLikelihoodEvaluator
+from .base import BaseModel
 
 
-class TestNormal(BaseLikelihoodEvaluator):
+class TestNormal(BaseModel):
     r"""The test distribution is an multi-variate normal distribution.
 
-    The number of dimensions is set by the number of ``variable_args`` that are
-    passed. For details on the distribution used, see
+    The number of dimensions is set by the number of ``variable_params`` that
+    are passed. For details on the distribution used, see
     ``scipy.stats.multivariate_normal``.
 
     Parameters
     ----------
-    variable_args : (tuple of) string(s)
+    variable_params : (tuple of) string(s)
         A tuple of parameter names that will be varied.
     mean : array-like, optional
         The mean values of the parameters. If None provide, will use 0 for all
@@ -42,34 +42,34 @@ class TestNormal(BaseLikelihoodEvaluator):
         The covariance matrix of the parameters. If None provided, will use
         unit variance for all parameters, with cross-terms set to 0.
     **kwargs :
-        All other keyword arguments are passed to ``BaseLikelihoodEvaluator``.
+        All other keyword arguments are passed to ``BaseModel``.
 
     """
     name = "test_normal"
 
-    def __init__(self, variable_args, mean=None, cov=None, **kwargs):
+    def __init__(self, variable_params, mean=None, cov=None, **kwargs):
         # set up base likelihood parameters
-        super(TestNormal, self).__init__(variable_args, **kwargs)
+        super(TestNormal, self).__init__(variable_params, **kwargs)
         # set the lognl to 0 since there is no data
         self.set_lognl(0.)
         # store the pdf
         if mean is None:
-            mean = [0.]*len(variable_args)
+            mean = [0.]*len(variable_params)
         if cov is None:
-            cov = [1.]*len(variable_args)
+            cov = [1.]*len(variable_params)
         self._dist = stats.multivariate_normal(mean=mean, cov=cov)
         # check that the dimension is correct
-        if self._dist.dim != len(variable_args):
-            raise ValueError("dimension mis-match between variable_args and "
+        if self._dist.dim != len(variable_params):
+            raise ValueError("dimension mis-match between variable_params and "
                              "mean and/or cov")
 
     def loglikelihood(self, **params):
         """Returns the log pdf of the multivariate normal.
         """
-        return self._dist.logpdf([params[p] for p in self.variable_args])
+        return self._dist.logpdf([params[p] for p in self.variable_params])
 
 
-class TestEggbox(BaseLikelihoodEvaluator):
+class TestEggbox(BaseModel):
     r"""The test distribution is an 'eggbox' function:
 
     .. math::
@@ -77,22 +77,22 @@ class TestEggbox(BaseLikelihoodEvaluator):
         \log \mathcal{L}(\Theta) = \left[
             2+\prod_{i=1}^{n}\cos\left(\frac{\theta_{i}}{2}\right)\right]^{5}
 
-    The number of dimensions is set by the number of ``variable_args`` that are
-    passed.
+    The number of dimensions is set by the number of ``variable_params`` that
+    are passed.
 
     Parameters
     ----------
-    variable_args : (tuple of) string(s)
+    variable_params : (tuple of) string(s)
         A tuple of parameter names that will be varied.
     **kwargs :
-        All other keyword arguments are passed to ``BaseLikelihoodEvaluator``.
+        All other keyword arguments are passed to ``BaseModel``.
 
     """
     name = "test_eggbox"
 
-    def __init__(self, variable_args, **kwargs):
+    def __init__(self, variable_params, **kwargs):
         # set up base likelihood parameters
-        super(TestEggbox, self).__init__(variable_args, **kwargs)
+        super(TestEggbox, self).__init__(variable_params, **kwargs)
 
         # set the lognl to 0 since there is no data
         self.set_lognl(0.)
@@ -101,10 +101,10 @@ class TestEggbox(BaseLikelihoodEvaluator):
         """Returns the log pdf of the eggbox function.
         """
         return (2 + numpy.prod(numpy.cos([
-            params[p]/2. for p in self.variable_args]))) ** 5
+            params[p]/2. for p in self.variable_params]))) ** 5
 
 
-class TestRosenbrock(BaseLikelihoodEvaluator):
+class TestRosenbrock(BaseModel):
     r"""The test distribution is the Rosenbrock function:
 
     .. math::
@@ -112,22 +112,22 @@ class TestRosenbrock(BaseLikelihoodEvaluator):
         \log \mathcal{L}(\Theta) = -\sum_{i=1}^{n-1}[
             (1-\theta_{i})^{2}+100(\theta_{i+1} - \theta_{i}^{2})^{2}]
 
-    The number of dimensions is set by the number of ``variable_args`` that are
-    passed.
+    The number of dimensions is set by the number of ``variable_params`` that
+    are passed.
 
     Parameters
     ----------
-    variable_args : (tuple of) string(s)
+    variable_params : (tuple of) string(s)
         A tuple of parameter names that will be varied.
     **kwargs :
-        All other keyword arguments are passed to ``BaseLikelihoodEvaluator``.
+        All other keyword arguments are passed to ``BaseModel``.
 
     """
     name = "test_rosenbrock"
 
-    def __init__(self, variable_args, **kwargs):
+    def __init__(self, variable_params, **kwargs):
         # set up base likelihood parameters
-        super(TestRosenbrock, self).__init__(variable_args, **kwargs)
+        super(TestRosenbrock, self).__init__(variable_params, **kwargs)
 
         # set the lognl to 0 since there is no data
         self.set_lognl(0.)
@@ -136,13 +136,13 @@ class TestRosenbrock(BaseLikelihoodEvaluator):
         """Returns the log pdf of the Rosenbrock function.
         """
         logl = 0
-        p = [params[p] for p in self.variable_args]
+        p = [params[p] for p in self.variable_params]
         for i in range(len(p) - 1):
             logl -= ((1 - p[i])**2 + 100 * (p[i+1] - p[i]**2)**2)
         return logl
 
 
-class TestVolcano(BaseLikelihoodEvaluator):
+class TestVolcano(BaseModel):
     r"""The test distribution is a two-dimensional 'volcano' function:
 
     .. math::
@@ -153,20 +153,20 @@ class TestVolcano(BaseLikelihoodEvaluator):
 
     Parameters
     ----------
-    variable_args : (tuple of) string(s)
+    variable_params : (tuple of) string(s)
         A tuple of parameter names that will be varied. Must have length 2.
     **kwargs :
-        All other keyword arguments are passed to ``BaseLikelihoodEvaluator``.
+        All other keyword arguments are passed to ``BaseModel``.
 
     """
     name = "test_volcano"
 
-    def __init__(self, variable_args, **kwargs):
+    def __init__(self, variable_params, **kwargs):
         # set up base likelihood parameters
-        super(TestVolcano, self).__init__(variable_args, **kwargs)
+        super(TestVolcano, self).__init__(variable_params, **kwargs)
 
         # make sure there are exactly two variable args
-        if len(self.variable_args) != 2:
+        if len(self.variable_params) != 2:
             raise ValueError("TestVolcano distribution requires exactly "
                              "two variable args")
 
@@ -176,7 +176,7 @@ class TestVolcano(BaseLikelihoodEvaluator):
     def loglikelihood(self, **params):
         """Returns the log pdf of the 2D volcano function.
         """
-        p = [params[p] for p in self.variable_args]
+        p = [params[p] for p in self.variable_params]
         r = numpy.sqrt(p[0]**2 + p[1]**2)
         mu, sigma = 5.0, 2.0
         return 25 * (

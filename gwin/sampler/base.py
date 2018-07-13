@@ -47,40 +47,40 @@ class _BaseSampler(object):
 
     Parameters
     ----------
-    likelihood_evaluator : LikelihoodEvaluator
-        An instance of a gwin.likelihood evaluator.
+    model : Model
+        An instance of a model from ``gwin.models``.
     """
     name = None
 
-    def __init__(self, likelihood_evaluator):
-        self.likelihood_evaluator = likelihood_evaluator
+    def __init__(self, model):
+        self.model = model
         self.lastclear = 0
 
     @classmethod
-    def from_cli(cls, opts, likelihood_evaluator, pool=None,
-                 likelihood_call=None):
+    def from_cli(cls, opts, model, pool=None,
+                 model_call=None):
         """This function create an instance of this sampler from the given
         command-line options.
         """
         raise NotImplementedError("from_cli function not set")
 
     @property
-    def variable_args(self):
-        """Returns the variable args used by the likelihood evaluator.
+    def variable_params(self):
+        """Returns the parameters varied in the model.
         """
-        return self.likelihood_evaluator.variable_args
+        return self.model.variable_params
 
     @property
-    def sampling_args(self):
-        """Returns the sampling args used by the likelihood evaluator.
+    def sampling_params(self):
+        """Returns the sampling args used by the model.
         """
-        return self.likelihood_evaluator.sampling_args
+        return self.model.sampling_params
 
     @property
     def chain(self):
         """This function should return the past samples as a
         [additional dimensions x] niterations x ndim array, where ndim are the
-        number of variable args, niterations the number of iterations, and
+        number of model params, niterations the number of iterations, and
         additional dimeionions are any additional dimensions used by the
         sampler (e.g, walkers, temperatures).
         """
@@ -90,7 +90,7 @@ class _BaseSampler(object):
     def samples(self):
         """This function should return the past samples as a [additional
         dimensions x] niterations field array, where the fields are union
-        of the sampling args and the variable args.
+        of the sampling args and the model params.
         """
         return NotImplementedError("samples function not set.")
 
@@ -121,13 +121,13 @@ class _BaseSampler(object):
         return NotImplementedError("lnpost function not set.")
 
     @property
-    def likelihood_stats(self):
+    def model_stats(self):
         """This function should return the prior and likelihood ratio of
         samples as an [additional dimensions] x niterations
-        array. If the likelihood evaluator did not return that info to the
+        array. If the model did not return that info to the
         sampler, it should return None.
         """
-        return NotImplementedError("likelihood stats not set")
+        return NotImplementedError("model stats not set")
 
     def burn_in(self, initial_values):
         """This function should burn in the sampler.
@@ -164,11 +164,11 @@ class _BaseSampler(object):
             key is then stored as a separate attr with its corresponding value.
         """
         fp.attrs['sampler'] = self.name
-        fp.attrs['likelihood_evaluator'] = self.likelihood_evaluator.name
-        fp.attrs['variable_args'] = list(self.variable_args)
-        fp.attrs['sampling_args'] = list(self.sampling_args)
+        fp.attrs['model'] = self.model.name
+        fp.attrs['variable_params'] = list(self.variable_params)
+        fp.attrs['sampling_params'] = list(self.sampling_params)
         fp.attrs["niterations"] = self.niterations
-        fp.attrs["lognl"] = self.likelihood_evaluator.lognl
+        fp.attrs["lognl"] = self.model.lognl
         for arg, val in kwargs.items():
             if val is None:
                 val = str(None)
@@ -245,9 +245,8 @@ class BaseMCMCSampler(_BaseSampler):
     ----------
     sampler : sampler instance
         An instance of an MCMC sampler similar to kombine or emcee.
-    likelihood_evaluator : likelihood class
-        An instance of the likelihood class from the
-        gwin.likelihood module.
+    model : model class
+        A model from ``gwin.models``.
 
     Attributes
     ----------
@@ -261,7 +260,7 @@ class BaseMCMCSampler(_BaseSampler):
     """
     name = None
 
-    def __init__(self, sampler, likelihood_evaluator):
+    def __init__(self, sampler, model):
         self._sampler = sampler
         self._pos = None
         self._p0 = None
@@ -270,7 +269,7 @@ class BaseMCMCSampler(_BaseSampler):
         self.lastclear = 0
         self.burn_in_iterations = None
         # initialize
-        super(BaseMCMCSampler, self).__init__(likelihood_evaluator)
+        super(BaseMCMCSampler, self).__init__(model)
 
     @property
     def sampler(self):
@@ -290,7 +289,7 @@ class BaseMCMCSampler(_BaseSampler):
             starting positions.
         prior : JointDistribution, optional
             Use the given prior to set the initial positions rather than
-            `likelihood_evaultor`'s prior.
+            ``model``'s prior.
 
         Returns
         -------
@@ -299,21 +298,19 @@ class BaseMCMCSampler(_BaseSampler):
         """
         # create a (nwalker, ndim) array for initial positions
         nwalkers = self.nwalkers
-        ndim = len(self.variable_args)
+        ndim = len(self.variable_params)
         p0 = numpy.ones((nwalkers, ndim))
         # if samples are given then use those as initial positions
         if samples_file is not None:
-            samples = self.read_samples(samples_file, self.variable_args,
+            samples = self.read_samples(samples_file, self.variable_params,
                                         iteration=-1)
             # transform to sampling parameter space
-            samples = self.likelihood_evaluator.apply_sampling_transforms(
-                samples)
+            samples = self.model.apply_sampling_transforms(samples)
         # draw random samples if samples are not provided
         else:
-            samples = self.likelihood_evaluator.prior_rvs(size=nwalkers,
-                                                          prior=prior)
+            samples = self.model.prior_rvs(size=nwalkers, prior=prior)
         # convert to 2D array
-        for i, param in enumerate(self.sampling_args):
+        for i, param in enumerate(self.sampling_params):
             p0[:, i] = samples[param]
         self._p0 = p0
         return p0
@@ -339,34 +336,34 @@ class BaseMCMCSampler(_BaseSampler):
     def samples(self):
         """Returns the samples in the chain as a FieldArray.
 
-        If the sampling args are not the same as the variable args, the
-        returned samples will have both the sampling and the variable args.
+        If the sampling args are not the same as the model params, the
+        returned samples will have both the sampling and the model params.
 
         The returned FieldArray has dimension [additional dimensions x]
         nwalkers x niterations.
         """
         # chain is a [additional dimensions x] niterations x ndim array
         samples = self.chain
-        sampling_args = self.sampling_args
+        sampling_params = self.sampling_params
         # convert to dictionary to apply boundary conditions
         samples = {param: samples[..., ii] for
-                   ii, param in enumerate(sampling_args)}
-        samples = self.likelihood_evaluator._prior.apply_boundary_conditions(
+                   ii, param in enumerate(sampling_params)}
+        samples = self.model._prior.apply_boundary_conditions(
             **samples)
         # now convert to field array
         samples = FieldArray.from_arrays([samples[param]
-                                          for param in sampling_args],
-                                         names=sampling_args)
-        # apply transforms to go to variable args space
-        return self.likelihood_evaluator.apply_sampling_transforms(
+                                          for param in sampling_params],
+                                         names=sampling_params)
+        # apply transforms to go to model params space
+        return self.model.apply_sampling_transforms(
             samples, inverse=True)
 
     @property
-    def likelihood_stats(self):
-        """Returns the likelihood stats as a FieldArray, with field names
-        corresponding to the type of data returned by the likelihood evaluator.
+    def model_stats(self):
+        """Returns the model stats as a FieldArray, with field names
+        corresponding to the type of data returned by the model.
         The returned array has shape nwalkers x niterations. If no additional
-        stats were returned to the sampler by the likelihood evaluator, returns
+        stats were returned to the sampler by the model, returns
         None.
         """
         stats = numpy.array(self._sampler.blobs)
@@ -376,7 +373,7 @@ class BaseMCMCSampler(_BaseSampler):
         # blobs, they will be changed to `nan`s
         arrays = {field: stats[..., fi].astype(float)
                   for fi, field in
-                  enumerate(self.likelihood_evaluator.metadata_fields)}
+                  enumerate(self.model.metadata_fields)}
         return FieldArray.from_kwargs(**arrays).transpose()
 
     # write and read functions
@@ -404,7 +401,7 @@ class BaseMCMCSampler(_BaseSampler):
 
             ``fp[samples_group/{vararg}]``,
 
-        where ``{vararg}`` is the name of a variable arg. The samples are
+        where ``{vararg}`` is the name of a model params. The samples are
         written as an ``nwalkers x niterations`` array.
 
         Parameters
@@ -465,7 +462,7 @@ class BaseMCMCSampler(_BaseSampler):
             `fp[fp.samples_group/{field}/(temp{k}/)walker{i}]`,
 
         where `{i}` is the index of a walker, `{field}` is the name of each
-        field returned by `likelihood_stats`, and, if the sampler is
+        field returned by ``model_stats``, and, if the sampler is
         multitempered, `{k}` is the temperature.
 
         Parameters
@@ -486,25 +483,25 @@ class BaseMCMCSampler(_BaseSampler):
         """
         # samples is a nwalkers x niterations field array
         samples = self.samples
-        parameters = self.variable_args
+        parameters = self.variable_params
         samples_group = fp.samples_group
         # write data
         self.write_samples_group(fp, samples_group, parameters, samples,
                                  start_iteration=start_iteration,
                                  max_iterations=max_iterations)
 
-    def write_likelihood_stats(self, fp, start_iteration=None,
-                               max_iterations=None):
-        """Writes the `likelihood_stats` to the given file.
+    def write_model_stats(self, fp, start_iteration=None,
+                          max_iterations=None):
+        """Writes the ``model_stats`` to the given file.
 
         Results are written to:
 
             `fp[fp.stats_group/{field}/(temp{k}/)walker{i}]`,
 
         where `{i}` is the index of a walker, `{field}` is the name of each
-        field returned by `likelihood_stats`, and, if the sampler is
+        field returned by ``model_stats``, and, if the sampler is
         multitempered, `{k}` is the temperature.  If nothing is returned by
-        `likelihood_stats`, this does nothing.
+        ``model_stats``, this does nothing.
 
         Parameters
         -----------
@@ -526,10 +523,10 @@ class BaseMCMCSampler(_BaseSampler):
             The stats that were written, as a FieldArray. If there were no
             stats, returns None.
         """
-        samples = self.likelihood_stats
+        samples = self.model_stats
         if samples is None:
             return None
-        # ensure the prior is in the variable args parameter space
+        # ensure the prior is in the model params parameter space
         if 'logjacobian' in samples.fieldnames:
             samples['prior'] -= samples['logjacobian']
         parameters = samples.fieldnames
@@ -558,7 +555,7 @@ class BaseMCMCSampler(_BaseSampler):
 
     def write_results(self, fp, start_iteration=None,
                       max_iterations=None, **metadata):
-        """Writes metadata, samples, likelihood stats, and acceptance fraction
+        """Writes metadata, samples, model stats, and acceptance fraction
         to the given file. Also computes and writes the autocorrleation lengths
         of the chains. See the various write function for details.
 
@@ -581,8 +578,8 @@ class BaseMCMCSampler(_BaseSampler):
         self.write_metadata(fp, **metadata)
         self.write_chain(fp, start_iteration=start_iteration,
                          max_iterations=max_iterations)
-        self.write_likelihood_stats(fp, start_iteration=start_iteration,
-                                    max_iterations=max_iterations)
+        self.write_model_stats(fp, start_iteration=start_iteration,
+                               max_iterations=max_iterations)
         self.write_acceptance_fraction(fp)
         self.write_state(fp)
 
@@ -590,8 +587,8 @@ class BaseMCMCSampler(_BaseSampler):
     def _read_fields(fp, fields_group, fields, array_class,
                      thin_start=None, thin_interval=None, thin_end=None,
                      iteration=None, walkers=None, flatten=True):
-        """Base function for reading samples and likelihood stats. See
-        `read_samples` and `read_likelihood_stats` for details.
+        """Base function for reading samples and model stats. See
+        `read_samples` and `read_model_stats` for details.
 
         Parameters
         -----------
@@ -606,7 +603,7 @@ class BaseMCMCSampler(_BaseSampler):
             The type of array to return. Must have a `from_kwargs` attribute.
 
         For other details on keyword arguments, see `read_samples` and
-        `read_likelihood_stats`.
+        `read_model_stats`.
 
         Returns
         -------
@@ -728,7 +725,7 @@ class BaseMCMCSampler(_BaseSampler):
         if not fp.is_burned_in:
             return 0
         # we'll just read a single parameter from the file
-        samples = cls.read_samples(fp, fp.variable_args[0])
+        samples = cls.read_samples(fp, fp.variable_params[0])
         return samples.size
 
     @staticmethod
@@ -759,7 +756,7 @@ class BaseMCMCSampler(_BaseSampler):
     @classmethod
     def compute_acfs(cls, fp, start_index=None, end_index=None,
                      per_walker=False, walkers=None, parameters=None):
-        """Computes the autocorrleation function of the variable args in the
+        """Computes the autocorrleation function of the model params in the
         given file.
 
         By default, parameter values are averaged over all walkers at each
@@ -784,7 +781,7 @@ class BaseMCMCSampler(_BaseSampler):
             default) all walkers will be used.
         parameters : optional, str or array
             Calculate the ACF for only the given parameters. If None (the
-            default) will calculate the ACF for all of the variable args.
+            default) will calculate the ACF for all of the model params.
 
         Returns
         -------
@@ -795,7 +792,7 @@ class BaseMCMCSampler(_BaseSampler):
         """
         acfs = {}
         if parameters is None:
-            parameters = fp.variable_args
+            parameters = fp.variable_params
         if isinstance(parameters, str) or isinstance(parameters, unicode):
             parameters = [parameters]
         for param in parameters:
@@ -821,7 +818,7 @@ class BaseMCMCSampler(_BaseSampler):
 
     @classmethod
     def compute_acls(cls, fp, start_index=None, end_index=None):
-        """Computes the autocorrleation length for all variable args in the
+        """Computes the autocorrleation length for all model params in the
         given file.
 
         Parameter values are averaged over all walkers at each iteration.
@@ -846,7 +843,7 @@ class BaseMCMCSampler(_BaseSampler):
             A dictionary giving the ACL for each parameter.
         """
         acls = {}
-        for param in fp.variable_args:
+        for param in fp.variable_params:
             samples = cls.read_samples(fp, param,
                                        thin_start=start_index,
                                        thin_interval=1, thin_end=end_index,

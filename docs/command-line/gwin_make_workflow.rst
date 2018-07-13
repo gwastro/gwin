@@ -115,10 +115,10 @@ Inference configuration file
 
 You will also need a configuration file with sections that tells ``pycbc_inference`` how to construct the priors. A simple inference configuration file is::
 
-    [likelihood]
-    name = gaussian
+    [model]
+    name = gaussian_noise
 
-    [variable_args]
+    [variable_params]
     ; parameters to vary in inference sampler
     tc =
     mass1 =
@@ -130,7 +130,7 @@ You will also need a configuration file with sections that tells ``pycbc_inferen
     dec =
     polarization =
 
-    [static_args]
+    [static_params]
     ; parameters that do not vary in inference sampler
     approximant = SEOBNRv2_ROM_DoubleSpin
     f_lower = 28.0
@@ -179,10 +179,10 @@ You will also need a configuration file with sections that tells ``pycbc_inferen
 
 A simple configuration file for parameter estimation on the ringdown is::
 
-    [likelihood]
-    name = gaussian
+    [model]
+    name = gaussian_noise
 
-    [variable_args]
+    [variable_params]
     ; parameters to vary in inference sampler
     tc =
     f_0 =
@@ -190,7 +190,7 @@ A simple configuration file for parameter estimation on the ringdown is::
     amp =
     phi =
 
-    [static_args]
+    [static_params]
     ; parameters that do not vary in inference sampler
     approximant = FdQNM
     ra = 2.21535724066
@@ -227,7 +227,7 @@ A simple configuration file for parameter estimation on the ringdown is::
     ; how to construct prior distribution
     name = uniform_angle
 
-If you want to use another variable parameter in the inference sampler then add its name to ``[variable_args]`` and add a prior section like shown above.
+If you want to use another variable parameter in the inference sampler then add its name to ``[variable_params]`` and add a prior section like shown above.
 
 =====================
 Generate the workflow

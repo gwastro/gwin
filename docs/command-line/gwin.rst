@@ -66,12 +66,12 @@ given below. Any name that starts with ``test_`` is an analytic test
 distribution that requires no data or waveform generation; see the section
 below on running on an analytic distribution for more details.
 
-The other two required sections are ``[variable_args]``, and ``[static_args]``.
-The ``[variable_args]`` section contains a list of parameters that will be
-varied to obtain a posterior distribution. The ``[static_args]`` section
+The other two required sections are ``[variable_params]``, and ``[static_params]``.
+The ``[variable_params]`` section contains a list of parameters that will be
+varied to obtain a posterior distribution. The ``[static_params]`` section
 contains a list of parameters that are held fixed through out the run.
 
-Each parameter in ``[variable_args]`` must have a subsection in ``[prior]``.
+Each parameter in ``[variable_params]`` must have a subsection in ``[prior]``.
 To create a subsection use the ``-`` char, e.g. for one of the mass parameters do ``[prior-mass1]``.
 
 Each prior subsection must have a ``name`` option that identifies what prior to use.
@@ -79,9 +79,9 @@ These distributions are described in :py:mod:`pycbc.distributions`.
 
 .. include:: /_includes/distributions-table.rst
 
-One or more of the ``variable_args`` may be transformed to a different parameter space for purposes of sampling. This is done by specifying a ``[sampling_parameters]`` section. This section specifies which ``variable_args`` to replace with which parameters for sampling. This must be followed by one or more ``[sampling_transforms-{sampling_params}]`` sections that provide the transform class to use. For example, the following would cause the sampler to sample in chirp mass (``mchirp``) and mass ratio (``q``) instead of ``mass1`` and ``mass2``::
+One or more of the ``variable_params`` may be transformed to a different parameter space for purposes of sampling. This is done by specifying a ``[sampling_params]`` section. This section specifies which ``variable_params`` to replace with which parameters for sampling. This must be followed by one or more ``[sampling_transforms-{sampling_params}]`` sections that provide the transform class to use. For example, the following would cause the sampler to sample in chirp mass (``mchirp``) and mass ratio (``q``) instead of ``mass1`` and ``mass2``::
 
-    [sampling_parameters]
+    [sampling_params]
     mass1, mass2: mchirp, q
 
     [sampling_transforms-mchirp+q]
@@ -89,9 +89,9 @@ One or more of the ``variable_args`` may be transformed to a different parameter
 
 For a list of all possible transforms see :py:mod:`pycbc.transforms`.
 
-There can be any number of ``variable_args`` with any name. No parameter name is special (with the exception of parameters that start with ``calib_``; see below). However, in order to generate waveforms, certain parameters must be provided for waveform generation. If you would like to specify a ``variable_arg`` that is not one of these parameters, then you must provide a ``[waveforms_transforms-{param}]`` section that provides a transform from the arbitrary ``variable_args`` to the needed waveform parameter(s) ``{param}``. For example, in the following we provide a prior on ``chirp_distance``. Since ``distance``, not ``chirp_distance``, is recognized by the CBC waveforms module, we provide a transform to go from ``chirp_distance`` to ``distance``::
+There can be any number of ``variable_params`` with any name. No parameter name is special (with the exception of parameters that start with ``calib_``; see below). However, in order to generate waveforms, certain parameters must be provided for waveform generation. If you would like to specify a ``variable_arg`` that is not one of these parameters, then you must provide a ``[waveforms_transforms-{param}]`` section that provides a transform from the arbitrary ``variable_params`` to the needed waveform parameter(s) ``{param}``. For example, in the following we provide a prior on ``chirp_distance``. Since ``distance``, not ``chirp_distance``, is recognized by the CBC waveforms module, we provide a transform to go from ``chirp_distance`` to ``distance``::
 
-    [variable_args]
+    [variable_params]
     chirp_distance =
 
     [prior-chirp_distance]
@@ -104,7 +104,7 @@ There can be any number of ``variable_args`` with any name. No parameter name is
 
 Any class in the transforms module may be used. A useful transform for these purposes is the :py:class:`pycbc.transforms.CustomTransform`, which allows for arbitrary transforms using any function in the :py:mod:`pycbc.conversions`, :py:mod:`pycbc.coordinates`, or :py:mod:`pycbc.cosmology` modules, along with numpy math functions. For example, the following would use the I-Love-Q relationship :py:meth:`pycbc.conversions.dquadmon_from_lambda` to relate the quadrupole moment of a neutron star ``dquad_mon1`` to its tidal deformation ``lambda1``::
 
-    [variable_args]
+    [variable_params]
     lambda1 =
 
     [waveform_transforms-dquad_mon1]
@@ -134,7 +134,7 @@ This example demonstrates how to sample a 2D normal distribution with the ``emce
     [likelihood]
     name = test_normal
 
-    [variable_args]
+    [variable_params]
     x =
     y =
 
@@ -187,7 +187,7 @@ To make a movie showing how the walkers evolved, run::
 
 **Note:** you need ``ffmpeg`` installed for the mp4 to be created. See below for more information on using ``gwin_plot_movie``.
 
-The number of dimensions of the distribution is set by the number of ``variable_args`` in the configuration file. The names of the ``variable_args`` do not matter, just that the prior sections use the same names (in this example ``x`` and ``y`` were used, but ``foo`` and ``bar`` would be equally valid). A higher (or lower) dimensional distribution can be tested by simply adding more (or less) ``variable_args``.
+The number of dimensions of the distribution is set by the number of ``variable_params`` in the configuration file. The names of the ``variable_params`` do not matter, just that the prior sections use the same names (in this example ``x`` and ``y`` were used, but ``foo`` and ``bar`` would be equally valid). A higher (or lower) dimensional distribution can be tested by simply adding more (or less) ``variable_params``.
 
 Which analytic distribution is used is set by the ``[likelihood]`` section in
 the configuration file. By setting to ``test_normal`` we used
@@ -196,7 +196,7 @@ are: :py:class:`gwin.likelihood.TestEggbox`,
 :py:class:`gwin.likelihood.TestRosenbrock`, and
 :py:class:`gwin.likelihood.TestVolcano`. As with ``test_normal``, the
 dimensionality of these test distributions is set by the number of
-``variable_args`` in the configuration file. The ``test_volcano`` distribution
+``variable_params`` in the configuration file. The ``test_volcano`` distribution
 must be two dimensional, but all of the other distributions can have any number
 of dimensions. The configuration file syntax for the other test distributions
 is the same as in this example (aside from the name used in the
@@ -215,7 +215,7 @@ An example configuration file (named ``gwin.ini``) is::
     [likelihood]
     name = gaussian
 
-    [variable_args]
+    [variable_params]
     ; waveform parameters that will vary in MCMC
     tc =
     mass1 =
@@ -233,7 +233,7 @@ An example configuration file (named ``gwin.ini``) is::
     ra =
     dec =
 
-    [static_args]
+    [static_params]
     ; waveform parameters that will not change in MCMC
     approximant = IMRPhenomPv2
     f_lower = 18
@@ -300,7 +300,7 @@ An example configuration file (named ``gwin.ini``) is::
     ;
     ;   Sampling transforms
     ;
-    [sampling_parameters]
+    [sampling_params]
     ; parameters on the left will be sampled in
     ; parametes on the right
     mass1, mass2 : mchirp, q
@@ -320,9 +320,9 @@ parameters, we will create another configuration file that fixes the injection
 parameters to specific values. Create the following file, calling it
 ``injection.ini``::
 
-    [variable_args]
+    [variable_params]
 
-    [static_args]
+    [static_params]
     tc = 1126259462.420
     mass1 = 37
     mass2 = 32
@@ -339,13 +339,16 @@ parameters to specific values. Create the following file, calling it
 
 This will create a non-spinning injection (if no spin parameters are provided,
 the injection will be non-spinning by default) using ``IMRPhenomPv2``. (Note
-that we still need a ``[variable_args]`` section even though we are fixing all
+that we still need a ``[variable_params]`` section even though we are fixing all
 parameters.) Now run::
 
     pycbc_create_injections --verbose \
         --config-files injection.ini \
         --ninjections 1 \
-        --output-file injection.hdf
+        --output-file injection.hdf \
+        --variable-params-section variable_params \
+        --static-args-section static_params \
+        --dist-section prior
 
 This will create a file called ``injection.hdf`` which contains the injection's
 parameters. This file can be passed to ``gwin`` with the ``--injection-file``

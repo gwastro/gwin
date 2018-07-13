@@ -2,10 +2,10 @@
 
 # Calcualate a quick analytic likelihood parameter estimation
 cat > ana_inf.ini <<EOL
-[likelihood]
+[model]
 name = test_normal
 
-[variable_args]
+[variable_params]
 x =
 y =
 

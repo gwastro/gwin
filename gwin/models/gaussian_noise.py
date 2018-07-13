@@ -14,7 +14,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 """
-This modules provides likelihood classes that assume the noise is Gaussian.
+This modules provides model classes that assume the noise is Gaussian.
 """
 
 import numpy
@@ -24,11 +24,11 @@ from pycbc import filter
 from pycbc.waveform import NoWaveformError
 from pycbc.types import Array
 
-from .base import DataBasedLikelihoodEvaluator
+from .base import DataModel
 
 
-class GaussianLikelihood(DataBasedLikelihoodEvaluator):
-    r"""Computes log likelihoods assuming the detectors' noise is Gaussian.
+class GaussianNoise(DataModel):
+    r"""Model that assumes data is stationary Gaussian noise.
 
     With Gaussian noise the log likelihood functions for signal
     :math:`\log p(d|\Theta)` and for noise :math:`\log p(d|n)` are given by:
@@ -79,11 +79,11 @@ class GaussianLikelihood(DataBasedLikelihoodEvaluator):
     normalization using the ``norm`` keyword argument.
 
     For more details on initialization parameters and definition of terms, see
-    ``BaseLikelihoodEvaluator``.
+    ``BaseModel``.
 
     Parameters
     ----------
-    variable_args : (tuple of) string(s)
+    variable_params : (tuple of) string(s)
         A tuple of parameter names that will be varied.
     waveform_generator : generator class
         A generator class that creates waveforms. This must have a ``generate``
@@ -112,11 +112,11 @@ class GaussianLikelihood(DataBasedLikelihoodEvaluator):
         either a float or an array. If ``None``, ``4*data.values()[0].delta_f``
         will be used.
     **kwargs :
-        All other keyword arguments are passed to ``BaseLikelihoodEvaluator``.
+        All other keyword arguments are passed to ``BaseModel``.
 
     Examples
     --------
-    Create a signal, and set up the likelihood evaluator on that signal:
+    Create a signal, and set up the model on that signal:
 
     >>> from pycbc import psd as pypsd
     >>> from pycbc.waveform.generator import (FDomainDetFrameGenerator,
@@ -128,9 +128,10 @@ class GaussianLikelihood(DataBasedLikelihoodEvaluator):
     >>> fmin = 30.
     >>> m1, m2, s1z, s2z, tsig, ra, dec, pol, dist = (
             38.6, 29.3, 0., 0., 3.1, 1.37, -1.26, 2.76, 3*500.)
+    >>> variable_params = ['tc']
     >>> generator = FDomainDetFrameGenerator(
             FDomainCBCGenerator, 0.,
-            variable_args=['tc'], detectors=['H1', 'L1'],
+            variable_args=variable_params, detectors=['H1', 'L1'],
             delta_f=1./seglen, f_lower=fmin,
             approximant='SEOBNRv2_ROM_DoubleSpin',
             mass1=m1, mass2=m2, spin1z=s1z, spin2z=s2z,
@@ -138,38 +139,39 @@ class GaussianLikelihood(DataBasedLikelihoodEvaluator):
     >>> signal = generator.generate(tc=tsig)
     >>> psd = pypsd.aLIGOZeroDetHighPower(N, 1./seglen, 20.)
     >>> psds = {'H1': psd, 'L1': psd}
-    >>> likelihood_eval = gwin.GaussianLikelihood(
-            ['tc'], signal, generator, fmin, psds=psds, return_meta=False)
+    >>> model = gwin.models.GaussianNoise(
+            variable_params, signal, generator, fmin, psds=psds,
+            return_meta=False)
 
     Now compute the log likelihood ratio and prior-weighted likelihood ratio;
     since we have not provided a prior, these should be equal to each other:
 
-    >>> likelihood_eval.loglr(tc=tsig)
+    >>> model.loglr(tc=tsig)
     ArrayWithAligned(277.92945279883855)
-    >>> likelihood_eval.logplr(tc=tsig)
+    >>> model.logplr(tc=tsig)
     ArrayWithAligned(277.92945279883855)
 
     Compute the log likelihood and log posterior; since we have not
     provided a prior, these should both be equal to zero:
 
-    >>> likelihood_eval.loglikelihood(tc=tsig)
+    >>> model.loglikelihood(tc=tsig)
     ArrayWithAligned(0.0)
-    >>> likelihood_eval.logposterior(tc=tsig)
+    >>> model.logposterior(tc=tsig)
     ArrayWithAligned(0.0)
 
     Compute the SNR; for this system and PSD, this should be approximately 24:
 
-    >>> likelihood_eval.snr(tc=tsig)
+    >>> model.snr(tc=tsig)
     ArrayWithAligned(23.576660187517593)
 
-    Using the same likelihood evaluator, evaluate the log prior-weighted
+    Using the same model, evaluate the log prior-weighted
     likelihood ratio at several points in time, check that the max is at tsig,
     and plot (note that we use the class as a function here, which defaults
     to calling ``logplr``):
 
     >>> from matplotlib import pyplot
     >>> times = numpy.arange(seglen*sample_rate)/float(sample_rate)
-    >>> lls = numpy.array([likelihood_eval([t]) for t in times])
+    >>> lls = numpy.array([model([t]) for t in times])
     >>> times[lls.argmax()]
     3.10009765625
     >>> fig = pyplot.figure(); ax = fig.add_subplot(111)
@@ -181,24 +183,24 @@ class GaussianLikelihood(DataBasedLikelihoodEvaluator):
 
     >>> from pycbc import distributions
     >>> uniform_prior = distributions.Uniform(tc=(tsig-0.2,tsig+0.2))
-    >>> prior = distributions.JointDistribution(['tc'], uniform_prior)
-    >>> likelihood_eval = gwin.GaussianLikelihood(['tc'],
+    >>> prior = distributions.JointDistribution(variable_params, uniform_prior)
+    >>> model = gwin.models.GaussianNoise(variable_params,
             signal, generator, 20., psds=psds, prior=prior,
             return_meta=False)
-    >>> likelihood_eval.logplr(tc=tsig)
+    >>> model.logplr(tc=tsig)
     ArrayWithAligned(278.84574353071264)
-    >>> likelihood_eval.logposterior(tc=tsig)
+    >>> model.logposterior(tc=tsig)
     ArrayWithAligned(0.9162907318741418)
     """
-    name = 'gaussian'
+    name = 'gaussian_noise'
 
-    def __init__(self, variable_args, data, waveform_generator,
+    def __init__(self, variable_params, data, waveform_generator,
                  f_lower, psds=None, f_upper=None, norm=None,
                  **kwargs):
         # set up the boiler-plate attributes; note: we'll compute the
         # log evidence later
-        super(GaussianLikelihood, self).__init__(variable_args, data,
-                                                 waveform_generator, **kwargs)
+        super(GaussianNoise, self).__init__(variable_params, data,
+                                            waveform_generator, **kwargs)
         # check that the data and waveform generator have the same detectors
         if (sorted(waveform_generator.detectors.keys()) !=
                 sorted(self._data.keys())):
@@ -345,7 +347,7 @@ class GaussianLikelihood(DataBasedLikelihoodEvaluator):
                                   logjacobian=lj)
 
 
-class MarginalizedPhaseGaussianLikelihood(GaussianLikelihood):
+class MarginalizedPhaseGaussianNoise(GaussianNoise):
     r"""The likelihood is analytically marginalized over phase.
 
     This class can be used with signal models that can be written as:
@@ -356,7 +358,7 @@ class MarginalizedPhaseGaussianLikelihood(GaussianLikelihood):
 
     where :math:`\phi` is an arbitrary phase constant. This phase constant
     can be analytically marginalized over with a uniform prior as follows:
-    assuming the noise is stationary and Gaussian (see `GaussianLikelihood`
+    assuming the noise is stationary and Gaussian (see `GaussianNoise`
     for details), the posterior is:
 
     .. math::

@@ -30,7 +30,7 @@ from pycbc.strain import from_cli_multi_ifos as strain_from_cli_multi_ifos
 from pycbc.strain import (gates_from_cli, psd_gates_from_cli,
                           apply_gates_to_td, apply_gates_to_fd)
 
-from gwin import (burn_in, likelihood, sampler)
+from gwin import (burn_in, models, sampler)
 from gwin.io.hdf import InferenceFile, check_integrity
 from gwin.io.txt import InferenceTXTFile
 
@@ -141,15 +141,15 @@ def add_sampler_option_group(parser):
     return sampler_group
 
 
-def sampler_from_cli(opts, likelihood_evaluator, pool=None):
+def sampler_from_cli(opts, model, pool=None):
     """Parses the given command-line options to set up a sampler.
 
     Parameters
     ----------
     opts : object
         ArgumentParser options.
-    likelihood_evaluator : LikelihoodEvaluator
-        The likelihood evaluator to use with the sampler.
+    model : model
+        The model to use with the sampler.
 
     Returns
     -------
@@ -158,10 +158,10 @@ def sampler_from_cli(opts, likelihood_evaluator, pool=None):
     """
     # Used to help paralleize over multiple cores / MPI
     if opts.nprocesses > 1:
-        likelihood._global_instance = likelihood_evaluator
-        likelihood_call = likelihood._call_global_likelihood
+        models._global_instance = model
+        model_call = models._call_global_model
     else:
-        likelihood_call = None
+        model_call = None
 
     sclass = sampler.samplers[opts.sampler]
 
@@ -170,8 +170,8 @@ def sampler_from_cli(opts, likelihood_evaluator, pool=None):
     if pool is not None:
         pool.count = opts.nprocesses
 
-    return sclass.from_cli(opts, likelihood_evaluator,
-                           pool=pool, likelihood_call=likelihood_call)
+    return sclass.from_cli(opts, model,
+                           pool=pool, model_call=model_call)
 
 
 # -----------------------------------------------------------------------------
@@ -229,7 +229,7 @@ def validate_checkpoint_files(checkpoint_file, backup_file):
     if checkpoint_valid:
         with InferenceFile(checkpoint_file, 'r') as fp:
             try:
-                group = '{}/{}'.format(fp.samples_group, fp.variable_args[0])
+                group = '{}/{}'.format(fp.samples_group, fp.variable_params[0])
                 nsamples = fp[group].size
                 checkpoint_valid = nsamples != 0
             except KeyError:
@@ -238,7 +238,7 @@ def validate_checkpoint_files(checkpoint_file, backup_file):
     if backup_valid:
         with InferenceFile(backup_file, 'r') as fp:
             try:
-                group = '{}/{}'.format(fp.samples_group, fp.variable_args[0])
+                group = '{}/{}'.format(fp.samples_group, fp.variable_params[0])
                 backup_nsamples = fp[group].size
                 backup_valid = backup_nsamples != 0
             except KeyError:
@@ -286,7 +286,7 @@ def low_frequency_cutoff_from_cli(opts):
 
 
 def data_from_cli(opts):
-    """Loads the data needed for a likelihood evaluator from the given
+    """Loads the data needed for a model from the given
     command-line options. Gates specifed on the command line are also applied.
 
     Parameters
@@ -361,7 +361,7 @@ def data_from_cli(opts):
         for ifo in gates:
             stilde_dict[ifo] /= psd_dict[ifo]
         stilde_dict = apply_gates_to_fd(stilde_dict, gates)
-        # unwhiten the data for the likelihood generator
+        # unwhiten the data for the model
         for ifo in gates:
             stilde_dict[ifo] *= psd_dict[ifo]
 
@@ -398,8 +398,8 @@ def add_inference_results_option_group(parser, include_parameters_group=True):
     results_reading_group.add_argument(
         "--parameters", type=str, nargs="+", metavar="PARAM[:LABEL]",
         help="Name of parameters to load. If none provided will load all of "
-             "the variable args in the input-file. If provided, the "
-             "parameters can be any of the variable args or posteriors in "
+             "the model params in the input-file. If provided, the "
+             "parameters can be any of the model params or posteriors in "
              "the input file, derived parameters from them, or any function "
              "of them. Syntax for functions is python; any math functions in "
              "the numpy libary may be used. Can optionally also specify a "
@@ -516,7 +516,7 @@ def results_from_cli(opts, load_samples=True, **kwargs):
         fp = InferenceFile(input_file, "r")
 
         # get parameters and a dict of labels for each parameter
-        parameters = (fp.variable_args if opts.parameters is None
+        parameters = (fp.variable_params if opts.parameters is None
                       else opts.parameters)
         parameters, ldict = parse_parameters_opt(parameters)
 
@@ -535,7 +535,7 @@ def results_from_cli(opts, load_samples=True, **kwargs):
 
             # check if need extra parameters for a non-sampling parameter
             file_parameters, ts = transforms.get_common_cbc_transforms(
-                parameters, fp.variable_args)
+                parameters, fp.variable_params)
 
             # read samples from file
             samples = fp.read_samples(
@@ -592,43 +592,42 @@ def get_file_type(filename):
     raise TypeError("Extension is not supported.")
 
 
-def get_zvalues(fp, arg, likelihood_stats):
+def get_zvalues(fp, arg, model_stats):
     """Reads the data for the z-value of the plots from the inference file.
 
     Parameters
     ----------
     fp : InferenceFile
-        An open inference file; needed to get the value of the log noise
-        likelihood.
+        An open inference file.
     arg : str
         The argument to plot; must be one of `loglr`, `snr`, `logplr`,
         `logposterior`, or `prior`. If not one of these, a ValueError is
         raised.
-    likelihood_stats : FieldArray
-        The likelihood stats; the sort of thing returned by
-        `fp.read_likelihood_stats`.
+    model_stats : FieldArray
+        The model stats; the sort of thing returned by
+        ``fp.read_model_stats``.
 
     Returns
     -------
     zvals : numpy.array
-        An array of the desired likelihood values to plot.
+        An array of the desired values to plot.
     zlbl : str
         The label to use for the values on a plot.
     """
     if arg == 'loglr':
-        zvals = likelihood_stats.loglr
+        zvals = model_stats.loglr
         zlbl = r'$\log\mathcal{L}(\vec{\vartheta})$'
     elif arg == 'snr':
-        zvals = conversions.snr_from_loglr(likelihood_stats.loglr)
+        zvals = conversions.snr_from_loglr(model_stats.loglr)
         zlbl = r'$\rho(\vec{\vartheta})$'
     elif arg == 'logplr':
-        zvals = likelihood_stats.loglr + likelihood_stats.prior
+        zvals = model_stats.loglr + model_stats.prior
         zlbl = r'$\log[\mathcal{L}(\vec{\vartheta})p(\vec{\vartheta})]$'
     elif arg == 'logposterior':
-        zvals = likelihood_stats.loglr + likelihood_stats.prior + fp.lognl
+        zvals = model_stats.loglr + model_stats.prior + fp.lognl
         zlbl = r'$\log[p(d|\vec{\vartheta})p(\vec{\vartheta})]$'
     elif arg == 'prior':
-        zvals = likelihood_stats.prior
+        zvals = model_stats.prior
         zlbl = r'$\log p(\vec{\vartheta})$'
     else:
         raise ValueError("Unrecognized arg {}".format(arg))
@@ -760,7 +759,7 @@ def injections_from_cli(opts):
     parameters, _ = parse_parameters_opt(opts.parameters)
     if parameters is None:
         with InferenceFile(input_files[0], 'r') as fp:
-            parameters = fp.variable_args
+            parameters = fp.variable_params
     injections = None
     # loop over all input files getting the injection files
     for input_file in input_files:

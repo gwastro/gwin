@@ -38,18 +38,18 @@ To read all samples you would do::
     print(samples.distance)
 
 Some standard parameters that are derived from the variable arguments
-(listed via :attr:`fp.variable_args <InferenceFile.variable_args>`) can also
+(listed via :attr:`fp.variable_params <InferenceFile.variable_params>`) can also
 be retrieved.
-For example, if ``fp.variable_args`` includes ``'mass1'`` and ``'mass2'``,
+For example, if ``fp.variable_params`` includes ``'mass1'`` and ``'mass2'``,
 then you can retrieve the chirp mass with::
 
    samples = fp.read_samples("mchirp")
    print(samples.mchirp)
 
 Some standard parameters that are derived from the variable arguments
-(listed via :attr:`fp.variable_args <InferenceFile.variable_args>`) can also
+(listed via :attr:`fp.variable_params <InferenceFile.variable_params>`) can also
 be retrieved.
-For example, if ``fp.variable_args`` includes ``'mass1'`` and ``'mass2'``,
+For example, if ``fp.variable_params`` includes ``'mass1'`` and ``'mass2'``,
 then you can retrieve the chirp mass with::
 
    samples = fp.read_samples("mchirp")

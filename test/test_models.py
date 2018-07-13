@@ -19,13 +19,13 @@ import pytest
 import numpy
 from numpy import isclose
 
-from gwin import likelihood as gwin_likelihood
+from gwin import models
 
 from utils import _TestBase
 
 
 class TestNoPrior(object):
-    TEST_CLASS = gwin_likelihood.base._NoPrior
+    TEST_CLASS = models.base._NoPrior
 
     def test_apply_boundary_conditions(self):
         p = self.TEST_CLASS()
@@ -36,12 +36,12 @@ class TestNoPrior(object):
         assert p() == 0.
 
 
-class TestBaseLikelihoodEvaluator(_TestBase):
-    TEST_CLASS = gwin_likelihood.base.BaseLikelihoodEvaluator
+class TestBaseModel(_TestBase):
+    TEST_CLASS = models.base.BaseModel
 
     @classmethod
     def setup_class(cls):
-        super(TestBaseLikelihoodEvaluator, cls).setup_class()
+        super(TestBaseModel, cls).setup_class()
 
         cls.data = range(10)
 
@@ -50,8 +50,8 @@ class TestBaseLikelihoodEvaluator(_TestBase):
         return self.TEST_CLASS([])
 
     def test_defaults(self, simple):
-        assert simple.variable_args is tuple()
-        assert isinstance(simple._prior, gwin_likelihood.base._NoPrior)
+        assert simple.variable_params is tuple()
+        assert isinstance(simple._prior, models.base._NoPrior)
 
     @pytest.mark.parametrize('transforms, params, result', [
         (None, {}, 0.),  # defaults
@@ -87,10 +87,10 @@ class TestBaseLikelihoodEvaluator(_TestBase):
             self.TEST_CLASS._callfunc = _callfunc
 
 
-# -- GaussianLikelihood -------------------------------------------------------
+# -- GaussianNoise -------------------------------------------------------
 
-class TestGaussianLikelihood(TestBaseLikelihoodEvaluator):
-    TEST_CLASS = gwin_likelihood.GaussianLikelihood
+class TestGaussianNoise(TestBaseModel):
+    TEST_CLASS = models.GaussianNoise
 
     @pytest.fixture(scope='function')
     def simple(self, random_data, fd_waveform_generator):

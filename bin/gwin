@@ -59,7 +59,7 @@ parser.add_argument("--seed", type=int, default=0,
 parser.add_argument("--samples-file", default=None,
                     help="Use an iteration from an InferenceFile as the "
                          "initial proposal distribution. The same "
-                         "number of walkers and the same [variable_args] "
+                         "number of walkers and the same [variable_params] "
                          "section in the configuration file should be used. "
                          "The priors must allow encompass the initial "
                          "positions from the InferenceFile being read.")
@@ -165,9 +165,6 @@ else:
                      "see --help")
 
 
-# get likelihood class
-likelihood_args = {}
-
 # set seed
 numpy.random.seed(opts.seed)
 logging.info("Using seed %i", opts.seed)
@@ -180,18 +177,18 @@ numpy.seterr(divide='ignore', invalid='ignore')
 ctx = scheme.from_cli(opts)
 fft.from_cli(opts)
 
-# Set up likelihood arguments
-likelihood_args = {}
+# Set up model arguments
+model_args = {}
 
 # get the data and psd
 strain_dict, stilde_dict, psd_dict = option_utils.data_from_cli(opts)
 low_frequency_cutoff_dict = option_utils.low_frequency_cutoff_from_cli(opts)
 if stilde_dict:
-    likelihood_args['data'] = stilde_dict
-    likelihood_args['f_lower'] = low_frequency_cutoff_dict.values()[0]
-    likelihood_args['delta_f'] = stilde_dict.values()[0].delta_f
-    likelihood_args['delta_t'] = strain_dict.values()[0].delta_t
-    likelihood_args['psds'] = psd_dict
+    model_args['data'] = stilde_dict
+    model_args['f_lower'] = low_frequency_cutoff_dict.values()[0]
+    model_args['delta_f'] = stilde_dict.values()[0].delta_f
+    model_args['delta_t'] = strain_dict.values()[0].delta_t
+    model_args['psds'] = psd_dict
 
 with ctx:
 
@@ -203,27 +200,26 @@ with ctx:
         logging.info("Initializing calibration model")
         recalib = {ifo : strain.read_model_from_config(cp, ifo) for
                    ifo in opts.instruments}
-        likelihood_args['recalib'] = recalib
+        model_args['recalib'] = recalib
 
     # get gates for templates
     gates = strain.gates_from_cli(opts)
     if gates:
-        likelihood_args['gates'] = gates
+        model_args['gates'] = gates
 
-    logging.info("Setting up likelihood")
+    logging.info("Setting up model")
 
     # construct class that will return the natural logarithm of likelihood
-    likelihood = gwin.likelihood.read_from_config(cp, section="likelihood",
-        **likelihood_args)
+    model = gwin.models.read_from_config(cp, section="model",
+        **model_args)
 
     burn_in_eval = burn_in.BurnIn(opts.burn_in_function,
                                 min_iterations=opts.min_burn_in)
 
-    # for likelihood evaluator
     logging.info("Setting up sampler")
 
     # create sampler that will run
-    sampler = option_utils.sampler_from_cli(opts, likelihood)
+    sampler = option_utils.sampler_from_cli(opts, model)
 
     # save information about this data and settings
     if not checkpoint_valid:
@@ -274,7 +270,9 @@ with ctx:
     elif len(cp.get_subsections("initial")):
         initial_dists = distributions.read_distributions_from_config(
             cp, section="initial")
-        init_prior = distributions.JointDistribution(variable_args,
+        constraints = distributions.read_constraints_from_config(cp,
+            constraint_section="initial_constraint")
+        init_prior = distributions.JointDistribution(sampler.variable_params,
             *initial_dists, **{"constraints" : constraints})
     else:
         init_prior = None
@@ -300,12 +298,12 @@ with ctx:
                 sampler.write_burn_in_iterations(fp, burnidx, is_burned_in)
                 # write the burn in results
                 logging.info("Writing burn in samples to file")
-                sampler.write_results(fp, static_args=likelihood.static_args,
+                sampler.write_results(fp, static_params=model.static_params,
                                       ifos=opts.instruments)
             # write to backup file
             with InferenceFile(backup_file, "a") as fp:
                 sampler.write_burn_in_iterations(fp, burnidx, is_burned_in)
-                sampler.write_results(fp, static_args=likelihood.static_args,
+                sampler.write_results(fp, static_params=model.static_params,
                                       ifos=opts.instruments)
 
 
@@ -356,7 +354,7 @@ with ctx:
         with InferenceFile(checkpoint_file, "a") as fp:
 
             logging.info("Writing results to file")
-            sampler.write_results(fp,static_args=likelihood.static_args,
+            sampler.write_results(fp, static_params=model.static_params,
                                   ifos=opts.instruments)
             logging.info("Updating burn in")
             burnidx, is_burned_in = burn_in_eval.update(sampler, fp)
@@ -373,7 +371,7 @@ with ctx:
         with InferenceFile(backup_file, "a") as fp:
 
             logging.info("Writing to backup file")
-            sampler.write_results(fp,static_args=likelihood.static_args,
+            sampler.write_results(fp, static_params=model.static_params,
                                   ifos=opts.instruments)
             sampler.write_burn_in_iterations(fp, burnidx, is_burned_in)
             if acls is not None:

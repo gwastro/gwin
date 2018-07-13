@@ -41,8 +41,8 @@ class TestInferenceFile(object):
             yield h5f
 
     @pytest.mark.parametrize('prop', [
-        'variable_args',
-        'sampling_args',
+        'variable_params',
+        'sampling_params',
         'lognl',
         'niterations',
         'burn_in_iterations',
@@ -77,15 +77,15 @@ class TestInferenceFile(object):
         empty.attrs['posterior_only'] = postonly
         assert empty.samples_parser is parser
 
-    def likelihood_eval_name(self, empty):
-        empty.attrs['likelihood_evaluator'] = 'anything'
-        assert empty.likelihood_eval_name == 'anything'
+    def model_name(self, empty):
+        empty.attrs['model_name'] = 'anything'
+        assert empty.model_name == 'anything'
 
-    def test_static_args(self, empty):
+    def test_static_params(self, empty):
         empty.attrs['arg1'] = 1
         empty.attrs['arg2'] = 2
-        empty.attrs['static_args'] = ('arg1', 'arg2')
-        assert empty.static_args == {'arg1': 1, 'arg2': 2}
+        empty.attrs['static_params'] = ('arg1', 'arg2')
+        assert empty.static_params == {'arg1': 1, 'arg2': 2}
 
     def test_cmd(self, empty):
         empty.attrs['cmd'] = 'test command'
@@ -126,6 +126,6 @@ class TestInferenceFile(object):
         return self._test_read(empty, 'read_samples', group,
                                ['x'], samples_group=samples_group)
 
-    def test_read_likelihood_stats(self, empty):
-        return self._test_read(empty, 'read_likelihood_stats',
+    def test_read_model_stats(self, empty):
+        return self._test_read(empty, 'read_model_stats',
                                empty.stats_group)

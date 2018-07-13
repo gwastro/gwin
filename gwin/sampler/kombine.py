@@ -46,9 +46,8 @@ class KombineSampler(BaseMCMCSampler):
 
     Parameters
     ----------
-    likelihood_evaluator : likelihood class
-        An instance of the likelihood class from the
-        gwin.likelihood module.
+    model : model
+        A model from ``gwin.models``.
     nwalkers : int
         Number of walkers to use in sampler.
     transd : bool
@@ -65,8 +64,8 @@ class KombineSampler(BaseMCMCSampler):
     """
     name = "kombine"
 
-    def __init__(self, likelihood_evaluator, nwalkers, transd=False,
-                 pool=None, likelihood_call=None,
+    def __init__(self, model, nwalkers, transd=False,
+                 pool=None, model_call=None,
                  update_interval=None):
 
         try:
@@ -74,17 +73,17 @@ class KombineSampler(BaseMCMCSampler):
         except ImportError:
             raise ImportError("kombine is not installed.")
 
-        if likelihood_call is None:
-            likelihood_call = likelihood_evaluator
+        if model_call is None:
+            model_call = model
 
         # construct sampler for use in KombineSampler
-        ndim = len(likelihood_evaluator.variable_args)
+        ndim = len(model.variable_params)
         count = 1 if pool is None else pool.count
-        sampler = kombine.Sampler(nwalkers, ndim, likelihood_call,
+        sampler = kombine.Sampler(nwalkers, ndim, model_call,
                                   transd=transd, pool=pool,
                                   processes=count)
         # initialize
-        super(KombineSampler, self).__init__(sampler, likelihood_evaluator)
+        super(KombineSampler, self).__init__(sampler, model)
         self._nwalkers = nwalkers
         self.update_interval = update_interval
 
@@ -96,8 +95,8 @@ class KombineSampler(BaseMCMCSampler):
         return numpy.mean(self._sampler.acceptance, axis=0)
 
     @classmethod
-    def from_cli(cls, opts, likelihood_evaluator, pool=None,
-                 likelihood_call=None):
+    def from_cli(cls, opts, model, pool=None,
+                 model_call=None):
         """Create an instance of this sampler from the given command-line
         options.
 
@@ -105,16 +104,16 @@ class KombineSampler(BaseMCMCSampler):
         ----------
         opts : ArgumentParser options
             The options to parse.
-        likelihood_evaluator : LikelihoodEvaluator
-            The likelihood evaluator to use with the sampler.
+        model : Model
+            The model to use with the sampler.
 
         Returns
         -------
         KombineSampler
             A kombine sampler initialized based on the given arguments.
         """
-        return cls(likelihood_evaluator, opts.nwalkers,
-                   likelihood_call=likelihood_call,
+        return cls(model, opts.nwalkers,
+                   model_call=model_call,
                    pool=pool, update_interval=opts.update_interval)
 
     def run(self, niterations, **kwargs):
@@ -143,8 +142,8 @@ class KombineSampler(BaseMCMCSampler):
             p0 = self.p0
         # do the same for starting blob
         blob0 = self._currentblob
-        if blob0 is None and self.likelihood_evaluator.return_meta:
-            blob0 = [self.likelihood_evaluator(p0[wi, :])[1]
+        if blob0 is None and self.model.return_meta:
+            blob0 = [self.model(p0[wi, :])[1]
                      for wi in range(self.nwalkers)]
         kwargs['blob0'] = blob0
         if 'update_interval' not in kwargs:
@@ -154,7 +153,7 @@ class KombineSampler(BaseMCMCSampler):
         p, lnpost, lnprop = res[0], res[1], res[2]
         # update the positions
         self._pos = p
-        if self.likelihood_evaluator.return_meta:
+        if self.model.return_meta:
             self._currentblob = self._sampler.blobs[-1]
         return p, lnpost, lnprop
 
@@ -214,8 +213,8 @@ class KombineSampler(BaseMCMCSampler):
             raise ValueError("burn-in already run")
         # run once
         p0 = self.p0
-        if self.likelihood_evaluator.return_meta:
-            blob0 = [self.likelihood_evaluator(p0[wi, :])[1]
+        if self.model.return_meta:
+            blob0 = [self.model(p0[wi, :])[1]
                      for wi in range(self.nwalkers)]
         else:
             blob0 = None
@@ -237,7 +236,7 @@ class KombineSampler(BaseMCMCSampler):
             # dataset doesn't exist yet
             fp.create_dataset(dataset_name, shape,
                               maxshape=(self._sampler._kde_size,
-                                        len(self.variable_args)),
+                                        len(self.variable_params)),
                               dtype=float, fletcher32=True)
             fp[dataset_name][:] = kde.data
 

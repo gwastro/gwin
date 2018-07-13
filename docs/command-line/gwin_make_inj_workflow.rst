@@ -49,6 +49,8 @@ A simple workflow configuration file::
     ; command line options use --help for more information
     ninjections = 1
     dist-section = prior
+    variable-args-section = variable_params
+    static-args-section = static_params
 
     [inference]
     ; command line options use --help for more information
@@ -66,7 +68,7 @@ A simple workflow configuration file::
     strain-high-pass = 15
     sample-rate = 2048
     low-frequency-cutoff = 20
-    config-overrides = static_args:approximant:TaylorF2
+    config-overrides = static_params:approximant:TaylorF2
     save-psd =
     save-strain =
     save-stilde =

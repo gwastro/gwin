@@ -29,7 +29,7 @@ from gwin import option_utils
 from gwin.io.hdf import InferenceFile
 from gwin.io.txt import InferenceTXTFile
 from gwin.sampler import samplers as SAMPLERS
-from gwin import likelihood
+from gwin import models
 
 from utils import mock
 from utils.core import tempfile_with_content
@@ -41,14 +41,14 @@ TEST_CONFIGURATION = """
 a = 1
 b = 2
 
-[likelihood]
-name = gaussian
+[model]
+name = gaussian_noise
 
-[variable_args]
+[variable_params]
 mass1 =
 mass2 =
 
-[static_args]
+[static_params]
 ra = 0
 dec = 0
 extra = [1, 2, 3]
@@ -60,11 +60,11 @@ name = mtotal_lt
 constraint_arg = anything
 required_parameters = mass1,mass2
 
-[sampling_parameters]
+[sampling_params]
 mass1, mass2 = mchirp, logitq
 spin1_a = logitspin1_a
 
-[test_sampling_parameters]
+[test_sampling_params]
 a, b = c, d
 """
 
@@ -126,8 +126,8 @@ def test_config_parser_from_cli(overrides):
      {'mass1', 'mass2', 'spin1_a'}),
     ('test', {'c', 'd'}, {'a', 'b'}),
 ])
-def test_read_sampling_args_from_config(config, prefix, out1, out2):
-    spars, rpars = likelihood.base.read_sampling_args_from_config(
+def test_read_sampling_params_from_config(config, prefix, out1, out2):
+    spars, rpars = models.base.read_sampling_params_from_config(
         config, section_group=prefix)
     assert spars == list(out1)
     assert rpars == list(out2)
@@ -168,9 +168,9 @@ def test_add_sampler_option_group(capsys):
     assert 'invalid choice: \'bar\'' in capsys.readouterr()[1]
 
 
-@mock.patch('gwin.likelihood.GaussianLikelihood')
+@mock.patch('gwin.models.GaussianNoise')
 @pytest.mark.parametrize('name', SAMPLERS.keys())
-def test_sampler_from_cli(Likelihood, name):
+def test_sampler_from_cli(Model, name):
     parser = argparse.ArgumentParser()
     option_utils.add_sampler_option_group(parser)
     args = parser.parse_args([
@@ -178,7 +178,7 @@ def test_sampler_from_cli(Likelihood, name):
         '--nwalkers', '2',  # required for some samplers
         '--ntemps', '1',  # required for some samplers
     ])
-    sampler = option_utils.sampler_from_cli(args, Likelihood())
+    sampler = option_utils.sampler_from_cli(args, Model())
     assert isinstance(sampler, SAMPLERS[name])
 
 

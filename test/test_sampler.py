@@ -35,20 +35,20 @@ from pycbc import distributions
 from pycbc.psd import analytical
 from pycbc.waveform import generator
 
-from gwin import likelihood
+from gwin import models
 from gwin import sampler
 
 from utils import _TestBase
 
-LIKELIHOOD_EVALUATORS = [n for n in likelihood.likelihood_evaluators if
-                         not n.startswith('test_')]
+MODELS = [n for n in models.models
+          if not n.startswith('test_')]
 
 
 # -- parametrisation ----------------------------------------------------------
 
-def with_likelihood_eval():
-    return pytest.mark.parametrize('likelihood_eval', LIKELIHOOD_EVALUATORS,
-                                   indirect=['likelihood_eval'])
+def with_model():
+    return pytest.mark.parametrize('model', MODELS,
+                                   indirect=['model'])
 
 
 # -- tests --------------------------------------------------------------------
@@ -98,9 +98,9 @@ class TestSamplers(_TestBase):
         return distributions.JointDistribution(parameters, *prior_dists)
 
     @pytest.fixture
-    def likelihood_eval(self, fd_waveform, fd_waveform_generator, prior_eval,
-                        zdhp_psd, request):
-        eval_class = likelihood.likelihood_evaluators[request.param]
+    def model(self, fd_waveform, fd_waveform_generator, prior_eval,
+              zdhp_psd, request):
+        eval_class = models.models[request.param]
         return eval_class(
             fd_waveform_generator.variable_args,
             fd_waveform, fd_waveform_generator,
@@ -109,13 +109,13 @@ class TestSamplers(_TestBase):
 
     # -- actual tests ---------------------------
 
-    @with_likelihood_eval()
+    @with_model()
     @pytest.mark.parametrize('sampler_class', sampler.samplers.values())
-    def test_sampler(self, likelihood_eval, approximant, sampler_class):
+    def test_sampler(self, model, approximant, sampler_class):
         """Runs each sampler for 4 iterations.
         """
         # init sampler
-        s = sampler_class.from_cli(self.opts, likelihood_eval)
+        s = sampler_class.from_cli(self.opts, model)
         s.set_p0()
 
         # run

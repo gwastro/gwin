@@ -198,7 +198,7 @@ for i in range(n_injections):
     # make node for writing HTML table of parameters
     post_table_files += gwin_workflow.make_inference_summary_table(
                           workflow, inference_file, rdir["posteriors"],
-                          variable_args=unique_plot_parameters,
+                          variable_params=unique_plot_parameters,
                           analysis_seg=workflow.analysis_time,
                           tags=[str(i)])
 
@@ -256,12 +256,12 @@ if not opts.data_type == "analytical":
     inj_int_files = gwin_workflow.make_inference_inj_plots(
                                          workflow,
                                          inference_files, rdir.base,
-                                         cp.options("variable_args"),
+                                         cp.options("variable_params"),
                                          name="inference_intervals")
     inj_rec_files = gwin_workflow.make_inference_inj_plots(
                                          workflow,
                                          inference_files, rdir.base,
-                                         cp.options("variable_args"),
+                                         cp.options("variable_params"),
                                          name="inference_recovery")
     layout.two_column_layout(rdir.base,
                              [(a, b)
