@@ -58,7 +58,7 @@ class TestBaseModel(_TestBase):
     ])
     def test_logjacobian(self, simple, transforms, params, result):
         _st = simple.sampling_transforms
-        simple._sampling_transforms = transforms
+        simple.sampling_transforms = transforms
         try:
             assert simple.logjacobian(**params) == result
 

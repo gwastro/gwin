@@ -156,7 +156,6 @@ class BaseModel(object):
     name = None
 
     def __init__(self, variable_params, static_params=None, prior=None,
-                 sampling_params=None, replace_parameters=None,
                  sampling_transforms=None, return_meta=True):
         # store variable and static args
         if isinstance(variable_params, basestring):
@@ -180,73 +179,12 @@ class BaseModel(object):
         # initialize the log nl to None
         self._lognl = None
         self.return_meta = return_meta
-        # store sampling parameters and transforms
-        if sampling_params is not None:
-            if replace_parameters is None or \
-                    len(replace_parameters) != len(sampling_params):
-                raise ValueError("number of sampling parameters must be the "
-                                 "same as the number of replace parameters")
-            if sampling_transforms is None:
-                raise ValueError("must provide sampling transforms for the "
-                                 "sampling parameters")
-            # pull out the replaced parameters
-            self._sampling_params = [arg for arg in self._variable_params
-                                     if arg not in replace_parameters]
-            # add the sampling parameters
-            self._sampling_params += sampling_params
-            self._sampling_transforms = sampling_transforms
-        else:
-            self._sampling_params = self._variable_params
-            self._sampling_transforms = None
+        # store sampling transforms
+        self.sampling_transforms = sampling_transforms
 
     #
     # Methods for initiating from a config file.
     #
-    @staticmethod
-    def sampling_transforms_from_config(cp):
-        """Gets sampling transforms specified in a config file.
-
-        Sampling parameters and the parameters they replace are read from the
-        ``sampling_params`` section, if it exists. Sampling transforms are
-        read from the ``sampling_transforms`` section(s), using
-        ``transforms.read_transforms_from_config``.
-
-        If no ``sampling_params`` section exists in the config file, then
-        no sampling sampling transforms will be returned, even if
-        ``sampling_transforms`` sections do exist in the config file.
-
-        Parameters
-        ----------
-        cp : WorkflowConfigParser
-            Config file parser to read.
-
-        Returns
-        -------
-        dict
-            A dictionary of keyword arguments giving the
-            ``sampling_params``, ``replace_parameters``, and
-            ``sampling_transforms`` that were read from the config file. If
-            no ``sampling_params`` section exists in the config file, these
-            will all map to ``None``.
-        """
-        # get sampling transformations
-        sampling_params = {}
-        if cp.has_section('sampling_params'):
-            sampling_params, replace_parameters = \
-                read_sampling_params_from_config(cp)
-            sampling_transforms = transforms.read_transforms_from_config(
-                cp, 'sampling_transforms')
-            logging.info("Sampling in {} in place of {}".format(
-                ', '.join(sampling_params), ', '.join(replace_parameters)))
-        else:
-            sampling_params = None
-            replace_parameters = None
-            sampling_transforms = None
-        sampling_params['sampling_params'] = sampling_params
-        sampling_params['replace_parameters'] = replace_parameters
-        sampling_params['sampling_transforms'] = sampling_transforms
-        return sampling_params
-
     @staticmethod
     def extra_args_from_config(cp, section, skip_args=None, dtypes=None):
         """Gets any additional keyword in the given config file.
@@ -317,13 +255,13 @@ class BaseModel(object):
                                                constraints=constraints)
 
     @classmethod
-    def _init_args_from_config(cls, cp, section, prior_section,
-                               vparams_section, sparams_section,
-                               constraint_section):
-        """Helper function for loading parameters.
-
-        For details on parameters, see ``from_config``.
-        """
+    def _init_args_from_config(cls, cp):
+        """Helper function for loading parameters."""
+        section = "model"
+        prior_section = "prior",
+        vparams_section = 'variable_params'
+        sparams_section = 'static_params'
+        constraint_section = 'constraint'
         # check that the name exists and matches
         name = cp.get(section, 'name')
         if name != cls.name:
@@ -340,35 +278,30 @@ class BaseModel(object):
         args = {'variable_params': variable_params,
                 'static_params': static_params,
                 'prior': prior}
-        # get sampling transforms and any other keyword arguments provided
-        args.update(cls.sampling_transforms_from_config(cp))
+        # get any other keyword arguments provided
         args.update(cls.extra_args_from_config(cp, section,
                                                skip_args=['name']))
         return args
 
-    def from_config(cls, cp, section="model", prior_section="prior",
-                    vparams_section='variable_params',
-                    sparams_section='static_params',
-                    constraint_section='constraint',
-                    **kwargs):
+    def from_config(cls, cp, **kwargs):
         """Initializes an instance of this class from the given config file.
 
         Parameters
         ----------
         cp : WorkflowConfigParser
             Config file parser to read.
-        section : str, optional
-            The section to read the arguments to the model class from.
-            Default is 'model'.
-        prior_section : str, optional
-            The section to read the prior arguments from. Default is 'prior'.
         \**kwargs :
             All additional keyword arguments are passed to the class. Any
             provided keyword will over ride what is in the config file.
         """
-        args = cls._init_args_from_config(cp, section, prior_section,
-                                          vparams_section, sparams_section,
-                                          constraint_section)
+        args = cls._init_args_from_config(cp)
+        # try to load sampling transforms
+        try:
+            sampling_transforms = SamplingTransforms.from_config(
+                cp, args['variable_params'])
+        except AssertionError:
+            sampling_transforms = None
+        args['sampling_transforms'] = sampling_transforms
         args.update(kwargs)
         return cls(**args)
 
@@ -387,36 +320,16 @@ class BaseModel(object):
 
     @property
     def sampling_params(self):
-        """Returns the sampling parameters."""
-        return self._sampling_params
+        """Returns the sampling parameters.
 
-    @property
-    def sampling_transforms(self):
-        """Returns the sampling transforms."""
-        return self._sampling_transforms
-
-    def apply_sampling_transforms(self, samples, inverse=False):
-        """Applies the sampling transforms to the given samples.
-
-        If ``sampling_transforms`` is None, just returns the samples.
-
-        Parameters
-        ----------
-        samples : dict or FieldArray
-            The samples to apply the transforms to.
-        inverse : bool, optional
-            Whether to apply the inverse transforms (i.e., go from the sampling
-            args to the ``variable_params``). Default is False.
-
-        Returns
-        -------
-        dict or FieldArray
-            The transformed samples, along with the original samples.
+        If ``sampling_transforms`` is None, this is the same as the
+        ``variable_params``.
         """
-        if self._sampling_transforms is None:
-            return samples
-        return transforms.apply_transforms(samples, self._sampling_transforms,
-                                           inverse=inverse)
+        if self.sampling_transforms is None:
+            sampling_params = self.variable_params
+        else:
+            sampling_params = self.sampling_transforms.sampling_params
+        return sampling_params
 
     @property
     def lognl(self):
@@ -428,31 +341,9 @@ class BaseModel(object):
         self._lognl = lognl
 
     def logjacobian(self, **params):
-        r"""Returns the log of the jacobian needed to transform pdfs in the
-        ``variable_params`` parameter space to the ``sampling_params``
-        parameter space.
+        """The log jacobian of the sampling transforms.
 
-        Let :math:`\mathbf{x}` be the set of variable parameters,
-        :math:`\mathbf{y} = f(\mathbf{x})` the set of sampling parameters, and
-        :math:`p_x(\mathbf{x})` a probability density function defined over
-        :math:`\mathbf{x}`.
-        The corresponding pdf in :math:`\mathbf{y}` is then:
-
-        .. math::
-
-            p_y(\mathbf{y}) =
-                p_x(\mathbf{x})\left|\mathrm{det}\,\mathbf{J}_{ij}\right|,
-
-        where :math:`\mathbf{J}_{ij}` is the Jacobian of the inverse transform
-        :math:`\mathbf{x} = g(\mathbf{y})`. This has elements:
-
-        .. math::
-
-            \mathbf{J}_{ij} = \frac{\partial g_i}{\partial{y_j}}
-
-        This function returns
-        :math:`\log \left|\mathrm{det}\,\mathbf{J}_{ij}\right|`.
-
+        If no sampling transforms were provided, will just return 0.
 
         Parameters
         ----------
@@ -465,11 +356,10 @@ class BaseModel(object):
         float :
             The value of the jacobian.
         """
-        if self._sampling_transforms is None:
+        if self.sampling_transforms is None:
             return 0.
         else:
-            return numpy.log(abs(transforms.compute_jacobian(
-                params, self._sampling_transforms, inverse=True)))
+            self.sampling_transforms.logjacobian(**params)
 
     def prior(self, **params):
         """This function should return the prior of the given params.
@@ -504,12 +394,12 @@ class BaseModel(object):
             prior = self._prior
         p0 = prior.rvs(size=size)
         # transform if necessary
-        if self._sampling_transforms is not None:
-            ptrans = self.apply_sampling_transforms(p0)
+        if self.sampling_transforms is not None:
+            ptrans = self.sampling_transforms.apply(p0)
             # pull out the sampling args
             p0 = FieldArray.from_arrays([ptrans[arg]
-                                         for arg in self._sampling_params],
-                                        names=self._sampling_params)
+                                         for arg in self.sampling_params],
+                                        names=self.sampling_params)
         return p0
 
     def loglikelihood(self, **params):
@@ -619,10 +509,11 @@ class BaseModel(object):
         dict
             A dictionary of the transformed parameters.
         """
-        params = dict(zip(self._sampling_params, params))
+        params = dict(zip(self.sampling_params, params))
         # apply inverse transforms to go from sampling parameters to
         # variable args
-        params = self.apply_sampling_transforms(params, inverse=True)
+        if self.sampling_transforms is not None:
+            params = self.sampling_transforms.apply(params, inverse=True)
         # apply boundary conditions
         params = self._prior.apply_boundary_conditions(**params)
         return params
@@ -723,16 +614,12 @@ class DataModel(BaseModel):
         return params
 
     @classmethod
-    def _init_args_from_config(cls, cp, section, prior_section,
-                               vparams_section, sparams_section,
-                               constraint_section):
+    def _init_args_from_config(cls, cp):
         """Adds loading waveform_transforms to parent function.
 
         For details on parameters, see ``from_config``.
         """
-        args = super(DataModel, cls)._init_args_from_config(
-            cp, section, prior_section, vparams_section,
-            sparams_section, constraint_section)
+        args = super(DataModel, cls)._init_args_from_config(cp)
         # add waveform transforms to the arguments
         if any(cp.get_subsections('waveform_transforms')):
             logging.info("Loading waveform transforms")
@@ -744,10 +631,6 @@ class DataModel(BaseModel):
     @classmethod
     def from_config(cls, cp, data, delta_f=None, delta_t=None,
                     gates=None, recalibration=None,
-                    section="model", prior_section="prior",
-                    vparams_section='variable_params',
-                    sparams_section='static_params',
-                    constraint_section='constraint',
                     **kwargs):
         """Initializes an instance of this class from the given config file.
 
@@ -770,20 +653,13 @@ class DataModel(BaseModel):
         gates : dict of tuples, optional
             Dictionary of detectors -> tuples of specifying gate times. The
             sort of thing returned by `pycbc.gate.gates_from_cli`.
-        section : str, optional
-            The section to read the arguments to the model class from.
-            Default is 'model'.
-        prior_section : str, optional
-            The section to read the prior arguments from. Default is 'prior'.
         \**kwargs :
             All additional keyword arguments are passed to the class. Any
             provided keyword will over ride what is in the config file.
         """
         if data is None:
             raise ValueError("must provide data")
-        args = cls._init_args_from_config(cp, section, prior_section,
-                                          vparams_section, sparams_section,
-                                          constraint_section)
+        args = cls._init_args_from_config(cp)
         args['data'] = data
         args.update(kwargs)
 
@@ -808,6 +684,120 @@ class DataModel(BaseModel):
         args['waveform_generator'] = waveform_generator
 
         return cls(**args)
+
+
+class SamplingTransforms(object):
+    """Provides methods for transforming between sampling parameter space and
+    model parameter space.
+    """
+
+    def __init__(self, variable_params, sampling_params,
+                 replace_parameters, sampling_transforms):
+        assert(len(replace_parameters) == len(sampling_params),
+               "number of sampling parameters must be the "
+               "same as the number of replace parameters")
+        # pull out the replaced parameters
+        self.sampling_params = [arg for arg in variable_params
+                                if arg not in replace_parameters]
+        # add the sampling parameters
+        self.sampling_params += sampling_params
+        self.sampling_transforms = sampling_transforms
+
+    def logjacobian(self, **params):
+        r"""Returns the log of the jacobian needed to transform pdfs in the
+        ``variable_params`` parameter space to the ``sampling_params``
+        parameter space.
+
+        Let :math:`\mathbf{x}` be the set of variable parameters,
+        :math:`\mathbf{y} = f(\mathbf{x})` the set of sampling parameters, and
+        :math:`p_x(\mathbf{x})` a probability density function defined over
+        :math:`\mathbf{x}`.
+        The corresponding pdf in :math:`\mathbf{y}` is then:
+
+        .. math::
+
+            p_y(\mathbf{y}) =
+                p_x(\mathbf{x})\left|\mathrm{det}\,\mathbf{J}_{ij}\right|,
+
+        where :math:`\mathbf{J}_{ij}` is the Jacobian of the inverse transform
+        :math:`\mathbf{x} = g(\mathbf{y})`. This has elements:
+
+        .. math::
+
+            \mathbf{J}_{ij} = \frac{\partial g_i}{\partial{y_j}}
+
+        This function returns
+        :math:`\log \left|\mathrm{det}\,\mathbf{J}_{ij}\right|`.
+
+
+        Parameters
+        ----------
+        \**params :
+            The keyword arguments should specify values for all of the variable
+            args and all of the sampling args.
+
+        Returns
+        -------
+        float :
+            The value of the jacobian.
+        """
+        return numpy.log(abs(transforms.compute_jacobian(
+            params, self.sampling_transforms, inverse=True)))
+
+    def apply(self, samples, inverse=False):
+        """Applies the sampling transforms to the given samples.
+
+        Parameters
+        ----------
+        samples : dict or FieldArray
+            The samples to apply the transforms to.
+        inverse : bool, optional
+            Whether to apply the inverse transforms (i.e., go from the sampling
+            args to the ``variable_params``). Default is False.
+
+        Returns
+        -------
+        dict or FieldArray
+            The transformed samples, along with the original samples.
+        """
+        return transforms.apply_transforms(samples, self.sampling_transforms,
+                                           inverse=inverse)
+
+    @classmethod
+    def from_config(cls, cp, variable_params):
+        """Gets sampling transforms specified in a config file.
+
+        Sampling parameters and the parameters they replace are read from the
+        ``sampling_params`` section, if it exists. Sampling transforms are
+        read from the ``sampling_transforms`` section(s), using
+        ``transforms.read_transforms_from_config``.
+
+        An ``AssertionError`` is raised if no ``sampling_params`` section
+        exists in the config file.
+
+        Parameters
+        ----------
+        cp : WorkflowConfigParser
+            Config file parser to read.
+        variable_params : list
+            List of parameter names of the original variable params.
+
+        Returns
+        -------
+        SamplingTransforms
+            A sampling transforms class.
+        """
+        assert(cp.has_section('sampling_params'),
+               "no sampling_params section found in config file")
+        # get sampling transformations
+        sampling_params, replace_parameters = \
+            read_sampling_params_from_config(cp)
+        sampling_transforms = transforms.read_transforms_from_config(
+            cp, 'sampling_transforms')
+        logging.info("Sampling in {} in place of {}".format(
+            ', '.join(sampling_params), ', '.join(replace_parameters)))
+        return cls(variable_params, sampling_params,
+                   replace_parameters, sampling_transforms)
 
 
 def read_sampling_params_from_config(cp, section_group=None,
