@@ -72,7 +72,7 @@ class TestSamplers(_TestBase):
 
     @pytest.fixture
     def prior_eval(self):
-        """ Returns the prior evaluator class initialized with a set of
+        """ Returns the joint distribution class initialized with a set of
         pre-defined distributions for each parameters.
         """
         parameters, values = zip(*self.parameters.items())
@@ -101,11 +101,12 @@ class TestSamplers(_TestBase):
     def model(self, fd_waveform, fd_waveform_generator, prior_eval,
               zdhp_psd, request):
         eval_class = models.models[request.param]
-        return eval_class(
+        model = eval_class(
             fd_waveform_generator.variable_args,
             fd_waveform, fd_waveform_generator,
             self.fmin, psds={ifo: zdhp_psd for ifo in self.ifos},
-            prior=prior_eval, return_meta=False)
+            prior=prior_eval)
+        return models.CallModel(model, "logposterior", return_all_stats=False)
 
     # -- actual tests ---------------------------
 

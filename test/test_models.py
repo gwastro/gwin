@@ -37,7 +37,19 @@ class TestNoPrior(object):
 
 
 class TestBaseModel(_TestBase):
-    TEST_CLASS = models.base.BaseModel
+    """Tests BaseModel."""
+
+    class DummyBase(models.base.BaseModel):
+        """BaseModel cannot be initialized because it is an abstract base
+        class. It should only require ``_loglikelihood`` to be defined. This
+        tests that.
+        """
+        def _loglikelihood(self):
+            return 0.
+
+    TEST_CLASS = DummyBase
+    CALL_CLASS = models.CallModel
+    DEFAULT_CALLSTAT = 'logposterior'
 
     @classmethod
     def setup_class(cls):
@@ -47,11 +59,12 @@ class TestBaseModel(_TestBase):
 
     @pytest.fixture(scope='function')
     def simple(self):
-        return self.TEST_CLASS([])
+        model = self.TEST_CLASS([])
+        return self.CALL_CLASS(model, self.DEFAULT_CALLSTAT)
 
     def test_defaults(self, simple):
         assert simple.variable_params is tuple()
-        assert isinstance(simple._prior, models.base._NoPrior)
+        assert isinstance(simple.prior_distribution, models.base._NoPrior)
 
     @pytest.mark.parametrize('transforms, params, result', [
         (None, {}, 0.),  # defaults
@@ -60,60 +73,44 @@ class TestBaseModel(_TestBase):
         _st = simple.sampling_transforms
         simple.sampling_transforms = transforms
         try:
-            assert simple.logjacobian(**params) == result
+            simple.update(**params)
+            assert simple.logjacobian == result
 
         finally:
             simple._sampling_transforms = _st
-
-    @pytest.mark.parametrize('return_meta, result', [
-        (False, 1),
-        (True, (1, (2, 3, 4))),
-    ])
-    def test_formatreturn(self, simple, return_meta, result):
-        _rm = simple.return_meta
-        simple.return_meta = return_meta
-        try:
-            assert simple._formatreturn(1, 2, 3, 4) == result
-        finally:
-            simple.return_meta = _rm
-
-    def test_set_callfunc(self):
-        _callfunc = self.TEST_CLASS._callfunc
-        try:
-            self.TEST_CLASS.set_callfunc('logplr')
-            assert self.TEST_CLASS._callfunc == self.TEST_CLASS.logplr
-
-        finally:
-            self.TEST_CLASS._callfunc = _callfunc
 
 
 # -- GaussianNoise -------------------------------------------------------
 
 class TestGaussianNoise(TestBaseModel):
     TEST_CLASS = models.GaussianNoise
+    DEFAULT_CALLSTAT = 'logplr'
 
     @pytest.fixture(scope='function')
     def simple(self, random_data, fd_waveform_generator):
         data = {ifo: random_data for ifo in self.ifos}
-        return self.TEST_CLASS([], data, fd_waveform_generator,
-                               f_lower=self.fmin)
+        model = self.TEST_CLASS([], data, fd_waveform_generator,
+                                f_lower=self.fmin)
+        return self.CALL_CLASS(model, self.DEFAULT_CALLSTAT)
 
     @pytest.fixture(scope='function')
     def full(self, fd_waveform, fd_waveform_generator, zdhp_psd):
-        return self.TEST_CLASS(
+        model = self.TEST_CLASS(
             ['tc'], fd_waveform, fd_waveform_generator, self.fmin,
-            psds={ifo: zdhp_psd for ifo in self.ifos}, return_meta=False)
+            psds={ifo: zdhp_psd for ifo in self.ifos})
+        return self.CALL_CLASS(model, self.DEFAULT_CALLSTAT,
+                               return_all_stats=False)
 
-    @pytest.mark.parametrize('callfunc', ['logplr', 'logposterior'])
-    def test_call_1d_noprior(self, full, approximant, callfunc):
+    @pytest.mark.parametrize('callstat', ['logplr', 'logposterior'])
+    def test_call_1d_noprior(self, full, approximant, callstat):
         # set the calling function
-        full.set_callfunc(callfunc)
+        full.callstat = callstat
 
         # create times to evaluate over
         target = self.parameters['tc']
         tstart = self.parameters['tc'] - self.data_length / 2.
         times = tstart + numpy.arange(self.nsamp) / self.sample_rate
 
-        # evaluate likelihood and check recovery
-        likelihoods = [full([t]) for t in times]
-        assert isclose(times[numpy.argmax(likelihoods)], target)
+        # evaluate model and check recovery
+        stats = [full([t]) for t in times]
+        assert isclose(times[numpy.argmax(stats)], target)

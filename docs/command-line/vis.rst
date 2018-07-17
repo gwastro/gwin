@@ -27,9 +27,9 @@ For a list of options use ``gwin_plot_posterior --help``.
 Plotting a specific iteration
 -----------------------------
 
-An example of plotting the posteriors at a specific iteration::
+An example of plotting the posteriors at a specific iteration (the last one)::
 
-    ITER=4999
+    ITER=-1
     INPUT_FILE=gwin.hdf
     OUTPUT_FILE=scatter.png
     gwin_plot_posterior \
@@ -38,7 +38,7 @@ An example of plotting the posteriors at a specific iteration::
         --output-file ${OUTPUT_FILE} \
         --plot-scatter \
         --plot-marginal \
-        --z-arg logplr \
+        --z-arg 'snr_from_loglr(loglr):$\rho$' \
         --parameters "ra*12/pi:$\alpha$ (h)" \
                      "dec*180/pi:$\delta$ (deg)" \
                      "polarization*180/pi:$\psi$ (deg)" \
@@ -66,7 +66,7 @@ There are also options for thinning the chains of samples from the command line,
         --thin-interval ${THIN_INTERVAL} \
         --thin-end ${THIN_END} \
         --plot-marginal \
-        --z-arg logplr \
+        --z-arg 'snr_from_loglr(loglr):$\rho$' \
         --parameters "ra*12/pi:$\alpha$ (h)" \
                      "dec*180/pi:$\delta$ (deg)" \
                      "polarization*180/pi:$\psi$ (deg)" \
@@ -101,7 +101,7 @@ Making a movie (``gwin_plot_movie``)
         --cleanup \
         --plot-scatter \
         --plot-marginal \
-        --z-arg snr \
+        --z-arg 'snr_from_loglr(loglr):$\rho$' \
         --dpi ${DPI} \
         --parameters mass1 mass2 spin1_a spin1_azimuthal spin1_polar \
                      spin2_a spin2_azimuthal spin2_polar

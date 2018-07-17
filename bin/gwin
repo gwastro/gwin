@@ -210,8 +210,7 @@ with ctx:
     logging.info("Setting up model")
 
     # construct class that will return the natural logarithm of likelihood
-    model = gwin.models.read_from_config(cp, section="model",
-        **model_args)
+    model = gwin.models.read_from_config(cp, **model_args)
 
     burn_in_eval = burn_in.BurnIn(opts.burn_in_function,
                                 min_iterations=opts.min_burn_in)

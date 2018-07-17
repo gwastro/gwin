@@ -295,15 +295,14 @@ def test_add_scatter_option_group():
     parser = argparse.ArgumentParser()
     option_utils.add_scatter_option_group(parser)
     args = parser.parse_args([
-        '--z-arg', 'snr',
+        '--z-arg', 'logprior',
         '--vmin', '10.1',
         '--vmax', '20.2',
         '--scatter-cmap', 'hot',
     ])
     assert args.vmin == 10.1
     assert args.vmax == 20.2
-    with pytest.raises(SystemExit):
-        parser.parse_args(['--z-arg', 'blah'])
+    assert args.z_arg == 'logprior'
 
 
 def test_add_density_option_group():

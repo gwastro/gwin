@@ -142,7 +142,7 @@ class KombineSampler(BaseMCMCSampler):
             p0 = self.p0
         # do the same for starting blob
         blob0 = self._currentblob
-        if blob0 is None and self.model.return_meta:
+        if blob0 is None and self.model.return_all_stats:
             blob0 = [self.model(p0[wi, :])[1]
                      for wi in range(self.nwalkers)]
         kwargs['blob0'] = blob0
@@ -153,7 +153,7 @@ class KombineSampler(BaseMCMCSampler):
         p, lnpost, lnprop = res[0], res[1], res[2]
         # update the positions
         self._pos = p
-        if self.model.return_meta:
+        if self.model.return_all_stats:
             self._currentblob = self._sampler.blobs[-1]
         return p, lnpost, lnprop
 
@@ -213,7 +213,7 @@ class KombineSampler(BaseMCMCSampler):
             raise ValueError("burn-in already run")
         # run once
         p0 = self.p0
-        if self.model.return_meta:
+        if self.model.return_all_stats:
             blob0 = [self.model(p0[wi, :])[1]
                      for wi in range(self.nwalkers)]
         else:

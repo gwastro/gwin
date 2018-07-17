@@ -23,18 +23,18 @@ The executable ``gwin`` is designed to sample the parameter space
 and save the samples in an HDF file. A high-level description of the
 ``gwin`` algorithm is
 
-#. Estimate a PSD from a model or data.
+#. Read priors from a configuration file.
 
-#. Read gravitational-wave strain from a gravitational-wave model or use recolored fake strain.
+#. Setup the model to use. If the model uses data, then:
 
-#. Read priors from configuration file.
+    #. Read gravitational-wave strain from a gravitational-wave model or use recolored fake strain.
 
-#. Construct prior-weighted likelihood function from PSD, gravitational-wave strain, and priors.
+    #. Estimate a PSD.
 
-#. Run sampler that walks around parameter space and calculates the prior-weighted likelihood function.
+#. Run a sampler to estimate the posterior distribution of the model.
 
 ---------------------------------------------------
-Options for samplers, likelihood models, and priors
+Options for samplers, models, and priors
 ---------------------------------------------------
 
 For a full listing of all options run ``gwin --help``. In this subsection we reference documentation for Python classes that contain more information about choices for samplers, likelihood models, and priors.
@@ -54,14 +54,14 @@ Configuration file syntax
 Configuration files follow the ``ConfigParser`` syntax.
 There are three required sections.
 
-One is a ``[likelihood]`` section that contains the name of the likelihood class
+One is a ``[model]`` section that contains the name of the model class
 to use for evaluating the posterior. An example::
 
-    [likelihood]
-    name = gaussian
+    [model]
+    name = gaussian_noise
 
-In this case, the :py:class:`gwin.likelihood.GaussianLikelihood` would be used.
-Examples of using this likelihood class on a BBH injection and on GW150914 are
+In this case, the :py:class:`gwin.models.GaussianNoise` would be used.
+Examples of using this model on a BBH injection and on GW150914 are
 given below. Any name that starts with ``test_`` is an analytic test
 distribution that requires no data or waveform generation; see the section
 below on running on an analytic distribution for more details.
@@ -131,7 +131,7 @@ Several analytic distributions are available to run tests on. These can be run q
 
 This example demonstrates how to sample a 2D normal distribution with the ``emcee`` sampler. First, create the following configuration file (named ``normal2d.ini``)::
 
-    [likelihood]
+    [model]
     name = test_normal
 
     [variable_params]
@@ -154,21 +154,22 @@ Then run::
         --config-files normal2d.ini \
         --output-file normal2d.hdf \
         --sampler emcee \
-        --niterations 100 \
-        --nwalkers 5000
+        --niterations 50 \
+        --nwalkers 5000 \
+        --nprocesses 2
 
 This will run the ``emcee`` sampler on the 2D analytic normal distribution with 5000 walkers for 100 iterations.
 
 To plot the posterior distribution after the last iteration, run::
 
     gwin_plot_posterior --verbose \
-        --input-file normal2d.hdf \
-        --output-file posterior-normal2d.png \
-        --plot-scatter \
-        --plot-contours \
-        --plot-marginal \
-        --z-arg loglr \
-        --iteration -1
+            --input-file normal2d.hdf \
+            --output-file posterior-normal2d.png \
+            --plot-scatter \
+            --plot-contours \
+            --plot-marginal \
+            --z-arg 'loglikelihood:$\log p(h|\vartheta)$' \
+            --iteration -1
 
 This will plot each walker's position as a single point colored by the log likelihood ratio at that point, with the 50th and 90th percentile contours drawn. See below for more information about using ``gwin_plot_posterior``.
 
@@ -182,26 +183,26 @@ To make a movie showing how the walkers evolved, run::
         --plot-scatter \
         --plot-contours \
         --plot-marginal \
-        --z-arg loglr \
+        --z-arg 'loglikelihood:$\log p(h|\vartheta)$' \
         --frame-step 1
 
 **Note:** you need ``ffmpeg`` installed for the mp4 to be created. See below for more information on using ``gwin_plot_movie``.
 
 The number of dimensions of the distribution is set by the number of ``variable_params`` in the configuration file. The names of the ``variable_params`` do not matter, just that the prior sections use the same names (in this example ``x`` and ``y`` were used, but ``foo`` and ``bar`` would be equally valid). A higher (or lower) dimensional distribution can be tested by simply adding more (or less) ``variable_params``.
 
-Which analytic distribution is used is set by the ``[likelihood]`` section in
+Which analytic distribution is used is set by the ``[model]`` section in
 the configuration file. By setting to ``test_normal`` we used
-:py:class:`gwin.likelihood.TestNormal`. The other analytic distributions available
-are: :py:class:`gwin.likelihood.TestEggbox`,
-:py:class:`gwin.likelihood.TestRosenbrock`, and
-:py:class:`gwin.likelihood.TestVolcano`. As with ``test_normal``, the
+:py:class:`gwin.models.TestNormal`. The other analytic distributions available
+are: :py:class:`gwin.models.TestEggbox`,
+:py:class:`gwin.models.TestRosenbrock`, and
+:py:class:`gwin.models.TestVolcano`. As with ``test_normal``, the
 dimensionality of these test distributions is set by the number of
 ``variable_params`` in the configuration file. The ``test_volcano`` distribution
 must be two dimensional, but all of the other distributions can have any number
 of dimensions. The configuration file syntax for the other test distributions
 is the same as in this example (aside from the name used in the
-likelihood section). Indeed, with this configuration file one only
-needs to change the ``name`` argument in ``[likelihood]`` argument to try (2D versions of)
+model section). Indeed, with this configuration file one only
+needs to change the ``name`` argument in ``[model]`` argument to try (2D versions of)
 the other distributions.
 
 ------------------------------
@@ -212,8 +213,8 @@ This example recovers the parameters of a precessing binary black-hole (BBH).
 
 An example configuration file (named ``gwin.ini``) is::
 
-    [likelihood]
-    name = gaussian
+    [model]
+    name = gaussian_noise
 
     [variable_params]
     ; waveform parameters that will vary in MCMC

@@ -234,8 +234,9 @@ class _callprior(object):
         self.callable = model_call
 
     def __call__(self, args):
-        prior = self.callable(args, callfunc='prior')
-        return prior if isinstance(prior, numpy.float64) else prior[0]
+        prior = self.callable(args, callstat='logprior',
+                              return_all_stats=False)
+        return prior
 
 
 class _callloglikelihood(object):
@@ -245,7 +246,7 @@ class _callloglikelihood(object):
         self.callable = model_call
 
     def __call__(self, args):
-        return self.callable(args, callfunc='loglikelihood')
+        return self.callable(args, callstat='loglikelihood')
 
 
 class EmceePTSampler(BaseMCMCSampler):

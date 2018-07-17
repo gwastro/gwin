@@ -205,13 +205,16 @@ if samples.ndim > 2:
 # Get z-values
 if opts.z_arg is not None:
     logging.info("Getting model stats")
+    z_arg, zlbl = option_utils.parse_parameters_opt([opts.z_arg])
+    z_arg = z_arg[0]
+    zlbl = zlbl[z_arg]
     model_stats = fp.read_model_stats(thin_start=thin_start,
         thin_end=thin_end, thin_interval=thinint, iteration=itermask,
         flatten=False)
     if model_stats.ndim > 2:
         _, ii, jj = model_stats.shape
         model_stats = model_stats.reshape((ii, jj))
-    zvals, zlbl = option_utils.get_zvalues(fp, opts.z_arg, model_stats)
+    zvals = model_stats[z_arg]
     show_colorbar = True
     # Set common min and max for colorbar in all plots
     if opts.vmin is None:

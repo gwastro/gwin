@@ -138,6 +138,14 @@ def add_sampler_option_group(parser):
     sampler_group.add_argument(
         "--use-mpi", action='store_true', default=False,
         help="Use MPI to parallelize the sampler")
+    sampler_group.add_argument(
+        "--logpost-function", default="logposterior",
+        help="Which attribute of the model to use for the logposterior. "
+             "The default is logposterior. For example, if using the "
+             "gaussian_noise model, you may wish to set this to logplr, since "
+             "the logposterior includes a large constant contribution from "
+             "log noise likelihood.")
+
     return sampler_group
 
 
@@ -156,6 +164,9 @@ def sampler_from_cli(opts, model, pool=None):
     gwin.sampler
         A sampler initialized based on the given arguments.
     """
+    # create a wrapper for the model
+    model = models.CallModel(model, opts.logpost_function)
+
     # Used to help paralleize over multiple cores / MPI
     if opts.nprocesses > 1:
         models._global_instance = model
@@ -592,48 +603,6 @@ def get_file_type(filename):
     raise TypeError("Extension is not supported.")
 
 
-def get_zvalues(fp, arg, model_stats):
-    """Reads the data for the z-value of the plots from the inference file.
-
-    Parameters
-    ----------
-    fp : InferenceFile
-        An open inference file.
-    arg : str
-        The argument to plot; must be one of `loglr`, `snr`, `logplr`,
-        `logposterior`, or `prior`. If not one of these, a ValueError is
-        raised.
-    model_stats : FieldArray
-        The model stats; the sort of thing returned by
-        ``fp.read_model_stats``.
-
-    Returns
-    -------
-    zvals : numpy.array
-        An array of the desired values to plot.
-    zlbl : str
-        The label to use for the values on a plot.
-    """
-    if arg == 'loglr':
-        zvals = model_stats.loglr
-        zlbl = r'$\log\mathcal{L}(\vec{\vartheta})$'
-    elif arg == 'snr':
-        zvals = conversions.snr_from_loglr(model_stats.loglr)
-        zlbl = r'$\rho(\vec{\vartheta})$'
-    elif arg == 'logplr':
-        zvals = model_stats.loglr + model_stats.prior
-        zlbl = r'$\log[\mathcal{L}(\vec{\vartheta})p(\vec{\vartheta})]$'
-    elif arg == 'logposterior':
-        zvals = model_stats.loglr + model_stats.prior + fp.lognl
-        zlbl = r'$\log[p(d|\vec{\vartheta})p(\vec{\vartheta})]$'
-    elif arg == 'prior':
-        zvals = model_stats.prior
-        zlbl = r'$\log p(\vec{\vartheta})$'
-    else:
-        raise ValueError("Unrecognized arg {}".format(arg))
-    return zvals, zlbl
-
-
 def add_plot_posterior_option_group(parser):
     """Adds the options needed to configure plots of posterior results.
 
@@ -819,13 +788,8 @@ def add_scatter_option_group(parser):
 
     scatter_group.add_argument(
         '--z-arg', type=str, default=None,
-        choices=['loglr', 'snr', 'logplr', 'logposterior', 'prior'],
-        help='What to color the scatter points by. If not set, '
-             'all points will be the same color. Choices are: '
-             'loglr: the log likelihood ratio; snr: SNR; '
-             'logplr: loglr + log of the prior; '
-             'logposterior: log likelihood function + log prior; '
-             'prior: the log of the prior.')
+        help='What to color the scatter points by. Syntax is the same as the '
+             'parameters option.')
     scatter_group.add_argument(
         "--vmin", type=float, help="Minimum value for the colorbar.")
     scatter_group.add_argument(

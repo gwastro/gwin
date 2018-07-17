@@ -22,17 +22,26 @@
 # =============================================================================
 #
 
-"""
-Base class structures.
+"""Base class for models.
 """
 
 import numpy
 import logging
 
-from pycbc import (conversions, transforms, distributions)
-from pycbc.waveform import generator
+from abc import (ABCMeta, abstractmethod)
+
+from pycbc import (transforms, distributions)
 from pycbc.io import FieldArray
 from pycbc.workflow import ConfigParser
+
+
+#
+# =============================================================================
+#
+#                               Support classes
+#
+# =============================================================================
+#
 
 
 class _NoPrior(object):
@@ -46,644 +55,55 @@ class _NoPrior(object):
         return 0.
 
 
-class BaseModel(object):
-    r"""Base container class for models.
+class ModelStats(object):
+    """Class to hold model's current stat values."""
 
-    The nomenclature used by this class and those that inherit from it is as
-    follows: Given some model parameters :math:`\Theta` and some data
-    :math:`d` with noise model :math:`n`, we define:
+    @property
+    def statnames(self):
+        """Returns the names of the stats that have been stored."""
+        return self.__dict__.keys()
 
-     * the **likelihood function**: :math:`p(d|\Theta)`
+    def getstats(self, names, default=numpy.nan):
+        """Get the requested stats as a tuple.
 
-     * the **noise likelihood**: :math:`p(d|n)`
-
-     * the **likelihood ratio**:
-       :math:`\mathcal{L}(\Theta) = \frac{p(d|\Theta)}{p(d|n)}`
-
-     * the **prior**: :math:`p(\Theta)`
-
-     * the **posterior**: :math:`p(\Theta|d) \propto p(d|\Theta)p(\Theta)`
-
-     * the **prior-weighted likelihood ratio**:
-       :math:`\hat{\mathcal{L}}(\Theta) = \frac{p(d|\Theta)p(\Theta)}{p(d|n)}`
-
-     * the **SNR**: :math:`\rho(\Theta) = \sqrt{2\log\mathcal{L}(\Theta)}`;
-       for two detectors, this is approximately the same quantity as the
-       coincident SNR used in the CBC search.
-
-    .. note::
-
-        Although the posterior probability is only proportional to
-        :math:`p(d|\Theta)p(\Theta)`, here we refer to this quantity as the
-        posterior. Also note that for a given noise model, the prior-weighted
-        likelihood ratio is proportional to the posterior, and so the two can
-        usually be swapped for each other.
-
-    When performing parameter estimation we work with the log of these values
-    since we are mostly concerned with their values around the maxima. If
-    we have multiple detectors, each with data :math:`d_i`, then these values
-    simply sum over the detectors. For example, the log likelihood ratio is:
-
-    .. math::
-
-        \log \mathcal{L}(\Theta) =
-            \sum_i \left[\log p(\Theta|d_i) - \log p(n|d_i)\right]
-
-    This class provides boiler-plate methods and attributes for evaluating the
-    log likelihood ratio, log prior, and log likelihood. This class makes no
-    assumption about the detectors' noise model :math:`n`. As such, the methods
-    for computing these values raise ``NotImplementedErrors``. These functions
-    need to be monkey patched, or other classes that inherit from this class
-    need to define their own functions.
-
-    Instances of this class can be called like a function. The default is for
-    this class to call its ``logposterior`` function, but this can be changed
-    with the ``set_callfunc`` method.
-
-    Parameters
-    ----------
-    variable_params : (tuple of) string(s)
-        A tuple of parameter names that will be varied.
-    static_params : dict, optional
-        A dictionary of parameter names -> values to keep fixed.
-    prior : callable, optional
-        A callable class or function that computes the log of the prior. If
-        None provided, will use ``_noprior``, which returns 0 for all parameter
-        values.
-    sampling_params : list, optional
-        Replace one or more of the ``variable_params`` with the given
-        parameters for sampling.
-    replace_parameters : list, optional
-        The ``variable_params`` to replace with sampling parameters. Must be
-        the same length as ``sampling_params``.
-    sampling_transforms : list, optional
-        List of transforms to use to go between the ``variable_params`` and the
-        sampling parameters. Required if ``sampling_params`` is not None.
-
-    Attributes
-    ----------
-    lognl : {None, float}
-        The log of the noise likelihood summed over the number of detectors.
-    return_meta : {True, bool}
-        If True, ``prior``, ``logposterior``, and ``logplr`` will return the
-        value of the prior, the loglikelihood ratio, and the log jacobian,
-        along with the posterior/plr.
-
-    Methods
-    -------
-    logjacobian :
-        Returns the log of the jacobian needed to go from the parameter space
-        of the ``variable_params`` to the sampling args.
-    prior :
-        A function that returns the log of the prior.
-    loglikelihood :
-        A function that returns the log of the likelihood function.
-    logposterior :
-        A function that returns the log of the posterior.
-    loglr :
-        A function that returns the log of the likelihood ratio.
-    logplr :
-        A function that returns the log of the prior-weighted likelihood ratio.
-    snr :
-        A function that returns the square root of twice the log likelihood
-        ratio. If the log likelihood ratio is < 0, will return 0.
-    evaluate :
-        Maps a list of values to their parameter names and calls whatever the
-        call function is set to.
-    set_callfunc :
-        Set the function to use when the class is called as a function.
-    """
-    name = None
-
-    def __init__(self, variable_params, static_params=None, prior=None,
-                 sampling_transforms=None, return_meta=True):
-        # store variable and static args
-        if isinstance(variable_params, basestring):
-            variable_params = (variable_params,)
-        if not isinstance(variable_params, tuple):
-            variable_params = tuple(variable_params)
-        self._variable_params = variable_params
-        if static_params is None:
-            static_params = {}
-        self._static_params = static_params
-        # store prior
-        if prior is None:
-            self._prior = _NoPrior()
-        else:
-            # check that the variable args of the prior evaluator is the same
-            # as the waveform generator
-            if prior.variable_args != variable_params:
-                raise ValueError("variable args of prior and waveform "
-                                 "generator do not match")
-            self._prior = prior
-        # initialize the log nl to None
-        self._lognl = None
-        self.return_meta = return_meta
-        # store sampling transforms
-        self.sampling_transforms = sampling_transforms
-
-    #
-    # Methods for initiating from a config file.
-    #
-    @staticmethod
-    def extra_args_from_config(cp, section, skip_args=None, dtypes=None):
-        """Gets any additional keyword in the given config file.
+        If a requested stat is not an attribute (implying it hasn't been
+        stored), then the default value is returned for that stat.
 
         Parameters
         ----------
-        cp : WorkflowConfigParser
-            Config file parser to read.
-        section : str
-            The name of the section to read.
-        skip_args : list of str, optional
-            Names of arguments to skip.
-        dtypes : dict, optional
-            A dictionary of arguments -> data types. If an argument is found
-            in the dict, it will be cast to the given datatype. Otherwise, the
-            argument's value will just be read from the config file (and thus
-            be a string).
+        names : list of str
+            The names of the stats to get.
+        default : float, optional
+            What to return if a requested stat is not an attribute of self.
+            Default is ``numpy.nan``.
+
+        Returns
+        -------
+        tuple
+            A tuple of the requested stats.
+        """
+        return tuple(getattr(self, n, default) for n in names)
+
+    def getstatsdict(self, names, default=numpy.nan):
+        """Get the requested stats as a dictionary.
+
+        If a requested stat is not an attribute (implying it hasn't been
+        stored), then the default value is returned for that stat.
+
+        Parameters
+        ----------
+        names : list of str
+            The names of the stats to get.
+        default : float, optional
+            What to return if a requested stat is not an attribute of self.
+            Default is ``numpy.nan``.
 
         Returns
         -------
         dict
-            Dictionary of keyword arguments read from the config file.
+            A dictionary of the requested stats.
         """
-        kwargs = {}
-        if dtypes is None:
-            dtypes = {}
-        if skip_args is None:
-            skip_args = []
-        read_args = [opt for opt in cp.options(section)
-                     if opt not in skip_args]
-        for opt in read_args:
-            val = cp.get(section, opt)
-            # try to cast the value if a datatype was specified for this opt
-            try:
-                val = dtypes[opt](val)
-            except KeyError:
-                pass
-            kwargs[opt] = val
-        return kwargs
-
-    @staticmethod
-    def prior_from_config(cp, variable_params, prior_section,
-                          constraint_section):
-        """Gets arguments and keyword arguments from a config file.
-
-        Parameters
-        ----------
-        cp : WorkflowConfigParser
-            Config file parser to read.
-        variable_params : list
-            List of of model parameter names.
-        prior_section : str
-            Section to read prior(s) from.
-        constraint_section : str
-            Section to read constraint(s) from.
-
-        Returns
-        -------
-        pycbc.distributions.JointDistribution
-            The prior.
-        """
-        # get prior distribution for each variable parameter
-        logging.info("Setting up priors for each parameter")
-        dists = distributions.read_distributions_from_config(cp, prior_section)
-        constraints = distributions.read_constraints_from_config(
-            cp, constraint_section)
-        return distributions.JointDistribution(variable_params, *dists,
-                                               constraints=constraints)
-
-    @classmethod
-    def _init_args_from_config(cls, cp):
-        """Helper function for loading parameters."""
-        section = "model"
-        prior_section = "prior",
-        vparams_section = 'variable_params'
-        sparams_section = 'static_params'
-        constraint_section = 'constraint'
-        # check that the name exists and matches
-        name = cp.get(section, 'name')
-        if name != cls.name:
-            raise ValueError("section's {} name does not match mine {}".format(
-                             name, cls.name))
-        # get model parameters
-        # Requires PyCBC 1.11.2
-        variable_params, static_params = distributions.read_params_from_config(
-            cp, prior_section=prior_section, vargs_section=vparams_section,
-            sparams_section=sparams_section)
-        # get prior
-        prior = cls.prior_from_config(cp, variable_params, prior_section,
-                                      constraint_section)
-        args = {'variable_params': variable_params,
-                'static_params': static_params,
-                'prior': prior}
-        # get any other keyword arguments provided
-        args.update(cls.extra_args_from_config(cp, section,
-                                               skip_args=['name']))
-        return args
-
-    def from_config(cls, cp, **kwargs):
-        """Initializes an instance of this class from the given config file.
-
-        Parameters
-        ----------
-        cp : WorkflowConfigParser
-            Config file parser to read.
-        \**kwargs :
-            All additional keyword arguments are passed to the class. Any
-            provided keyword will over ride what is in the config file.
-        """
-        args = cls._init_args_from_config(cp)
-        # try to load sampling transforms
-        try:
-            sampling_transforms = SamplingTransforms.from_config(
-                cp, args['variable_params'])
-        except AssertionError:
-            sampling_transforms = None
-        args['sampling_transforms'] = sampling_transforms
-        args.update(kwargs)
-        return cls(**args)
-
-    #
-    # Properties and methods
-    #
-    @property
-    def variable_params(self):
-        """Returns the model parameters."""
-        return self._variable_params
-
-    @property
-    def static_params(self):
-        """Returns the model's static arguments."""
-        return self._static_params
-
-    @property
-    def sampling_params(self):
-        """Returns the sampling parameters.
-
-        If ``sampling_transforms`` is None, this is the same as the
-        ``variable_params``.
-        """
-        if self.sampling_transforms is None:
-            sampling_params = self.variable_params
-        else:
-            sampling_params = self.sampling_transforms.sampling_params
-        return sampling_params
-
-    @property
-    def lognl(self):
-        """Returns the log of the noise likelihood."""
-        return self._lognl
-
-    def set_lognl(self, lognl):
-        """Set the value of the log noise likelihood."""
-        self._lognl = lognl
-
-    def logjacobian(self, **params):
-        """The log jacobian of the sampling transforms.
-
-        If no sampling transforms were provided, will just return 0.
-
-        Parameters
-        ----------
-        \**params :
-            The keyword arguments should specify values for all of the variable
-            args and all of the sampling args.
-
-        Returns
-        -------
-        float :
-            The value of the jacobian.
-        """
-        if self.sampling_transforms is None:
-            return 0.
-        else:
-            self.sampling_transforms.logjacobian(**params)
-
-    def prior(self, **params):
-        """This function should return the prior of the given params.
-        """
-        logj = self.logjacobian(**params)
-        logp = self._prior(**params) + logj
-        if numpy.isnan(logp):
-            logp = -numpy.inf
-        return self._formatreturn(logp, prior=logp, logjacobian=logj)
-
-    def prior_rvs(self, size=1, prior=None):
-        """Returns random variates drawn from the prior.
-
-        If the ``sampling_params`` are different from the ``variable_params``,
-        the variates are transformed to the `sampling_params` parameter space
-        before being returned.
-
-        Parameters
-        ----------
-        size : int, optional
-            Number of random values to return for each parameter. Default is 1.
-        prior : JointDistribution, optional
-            Use the given prior to draw values rather than the saved prior.
-
-        Returns
-        -------
-        FieldArray
-            A field array of the random values.
-        """
-        # draw values from the prior
-        if prior is None:
-            prior = self._prior
-        p0 = prior.rvs(size=size)
-        # transform if necessary
-        if self.sampling_transforms is not None:
-            ptrans = self.sampling_transforms.apply(p0)
-            # pull out the sampling args
-            p0 = FieldArray.from_arrays([ptrans[arg]
-                                         for arg in self.sampling_params],
-                                        names=self.sampling_params)
-        return p0
-
-    def loglikelihood(self, **params):
-        """Returns the natural log of the likelihood function.
-        """
-        raise NotImplementedError("Likelihood function not set.")
-
-    def loglr(self, **params):
-        """Returns the natural log of the likelihood ratio.
-        """
-        return self.loglikelihood(**params) - self.lognl
-
-    # the names and order of data returned by _formatreturn when
-    # return_metadata is True
-    metadata_fields = ["prior", "loglr", "logjacobian"]
-
-    def _formatreturn(self, val, prior=None, loglr=None, logjacobian=0.):
-        """Adds the prior to the return value if return_meta is True.
-        Otherwise, just returns the value.
-
-        Parameters
-        ----------
-        val : float
-            The value to return.
-        prior : float, optional
-            The value of the prior.
-        loglr : float, optional
-            The value of the log likelihood-ratio.
-        logjacobian : float, optional
-            The value of the log jacobian used to go from the
-            ``variable_params`` to the ``sampling_params``.
-
-        Returns
-        -------
-        val : float
-            The given value to return.
-        *If return_meta is True:*
-        metadata : (prior, loglr, logjacobian)
-            A tuple of the prior, log likelihood ratio, and logjacobian.
-        """
-        if self.return_meta:
-            return val, (prior, loglr, logjacobian)
-        else:
-            return val
-
-    def logplr(self, **params):
-        """Returns the log of the prior-weighted likelihood ratio.
-        """
-        if self.return_meta:
-            logp, (_, _, logj) = self.prior(**params)
-        else:
-            logp = self.prior(**params)
-            logj = None
-        # if the prior returns -inf, just return
-        if logp == -numpy.inf:
-            return self._formatreturn(logp, prior=logp, logjacobian=logj)
-        llr = self.loglr(**params)
-        return self._formatreturn(llr + logp, prior=logp, loglr=llr,
-                                  logjacobian=logj)
-
-    def logposterior(self, **params):
-        """Returns the log of the posterior of the given params.
-        """
-        if self.return_meta:
-            logp, (_, _, logj) = self.prior(**params)
-        else:
-            logp = self.prior(**params)
-            logj = None
-        # if the prior returns -inf, just return
-        if logp == -numpy.inf:
-            return self._formatreturn(logp, prior=logp, logjacobian=logj)
-        ll = self.loglikelihood(**params)
-        return self._formatreturn(ll + logp, prior=logp, loglr=ll-self._lognl,
-                                  logjacobian=logj)
-
-    def snr(self, **params):
-        """Returns the "SNR" of the given params. This will return
-        imaginary values if the log likelihood ratio is < 0.
-        """
-        return conversions.snr_from_loglr(self.loglr(**params))
-
-    _callfunc = logposterior
-
-    @classmethod
-    def set_callfunc(cls, funcname):
-        """Sets the function used when the class is called as a function.
-
-        Parameters
-        ----------
-        funcname : str
-            The name of the function to use; must be the name of an instance
-            method.
-        """
-        cls._callfunc = getattr(cls, funcname)
-
-    def _transform_params(self, params):
-        """Applies all transforms to the given list of param values.
-
-        Parameters
-        ----------
-        params : list
-            A list of values. These are assumed to be in the same order as
-            ``variable_params``.
-
-        Returns
-        -------
-        dict
-            A dictionary of the transformed parameters.
-        """
-        params = dict(zip(self.sampling_params, params))
-        # apply inverse transforms to go from sampling parameters to
-        # variable args
-        if self.sampling_transforms is not None:
-            params = self.sampling_transforms.apply(params, inverse=True)
-        # apply boundary conditions
-        params = self._prior.apply_boundary_conditions(**params)
-        return params
-
-    def evaluate(self, params, callfunc=None):
-        """Evaluates the call function at the given list of parameter values.
-
-        Parameters
-        ----------
-        params : list
-            A list of values. These are assumed to be in the same order as
-            variable args.
-        callfunc : str, optional
-            The name of the function to call. If None, will use
-            ``self._callfunc``. Default is None.
-
-        Returns
-        -------
-        float or tuple :
-            If ``return_meta`` is False, the output of the call function. If
-            ``return_meta`` is True, a tuple of the output of the call function
-            and the meta data.
-        """
-        params = self._transform_params(params)
-        # apply any boundary conditions to the parameters before
-        # generating/evaluating
-        if callfunc is not None:
-            f = getattr(self, callfunc)
-        else:
-            f = self._callfunc
-        return f(**params)
-
-    __call__ = evaluate
-
-
-class DataModel(BaseModel):
-    r"""A model that requires data and a waveform generator.
-
-    Like ``BaseModel``, this class only provides boiler-plate
-    attributes and methods for evaluating models. Classes that make use
-    of data and a waveform generator should inherit from this.
-
-    Parameters
-    ----------
-    variable_params : (tuple of) string(s)
-        A tuple of parameter names that will be varied.
-    data : dict
-        A dictionary of data, in which the keys are the detector names and the
-        values are the data.
-    waveform_generator : generator class
-        A generator class that creates waveforms.
-    waveform_transforms : list, optional
-        List of transforms to use to go from the variable args to parameters
-        understood by the waveform generator.
-
-    \**kwargs :
-        All other keyword arguments are passed to ``BaseModel``.
-
-    Attributes
-    ----------
-    waveform_generator : dict
-        The waveform generator that the class was initialized with.
-    data : dict
-        The data that the class was initialized with.
-
-    For additional attributes and methods, see ``BaseModel``.
-    """
-    name = None
-
-    def __init__(self, variable_params, data, waveform_generator,
-                 waveform_transforms=None, **kwargs):
-        # we'll store a copy of the data
-        self._data = {ifo: d.copy() for (ifo, d) in data.items()}
-        self._waveform_generator = waveform_generator
-        self._waveform_transforms = waveform_transforms
-        super(DataModel, self).__init__(
-            variable_params, **kwargs)
-
-    @property
-    def waveform_generator(self):
-        """Returns the waveform generator that was set."""
-        return self._waveform_generator
-
-    @property
-    def data(self):
-        """Returns the data that was set."""
-        return self._data
-
-    def _transform_params(self, params):
-        """Adds waveform transforms to parent's ``_transform_params``."""
-        params = super(DataModel, self)._transform_params(
-            params)
-        # apply waveform transforms
-        if self._waveform_transforms is not None:
-            params = transforms.apply_transforms(params,
-                                                 self._waveform_transforms,
-                                                 inverse=False)
-        return params
-
-    @classmethod
-    def _init_args_from_config(cls, cp):
-        """Adds loading waveform_transforms to parent function.
-
-        For details on parameters, see ``from_config``.
-        """
-        args = super(DataModel, cls)._init_args_from_config(cp)
-        # add waveform transforms to the arguments
-        if any(cp.get_subsections('waveform_transforms')):
-            logging.info("Loading waveform transforms")
-            args['waveform_transforms'] = \
-                transforms.read_transforms_from_config(
-                    cp, 'waveform_transforms')
-        return args
-
-    @classmethod
-    def from_config(cls, cp, data, delta_f=None, delta_t=None,
-                    gates=None, recalibration=None,
-                    **kwargs):
-        """Initializes an instance of this class from the given config file.
-
-        Parameters
-        ----------
-        cp : WorkflowConfigParser
-            Config file parser to read.
-        data : dict
-            A dictionary of data, in which the keys are the detector names and
-            the values are the data. This is not retrieved from the config
-            file, and so must be provided.
-        delta_f : float
-            The frequency spacing of the data; needed for waveform generation.
-        delta_t : float
-            The time spacing of the data; needed for time-domain waveform
-            generators.
-        recalibration : dict of pycbc.calibration.Recalibrate, optional
-            Dictionary of detectors -> recalibration class instances for
-            recalibrating data.
-        gates : dict of tuples, optional
-            Dictionary of detectors -> tuples of specifying gate times. The
-            sort of thing returned by `pycbc.gate.gates_from_cli`.
-        \**kwargs :
-            All additional keyword arguments are passed to the class. Any
-            provided keyword will over ride what is in the config file.
-        """
-        if data is None:
-            raise ValueError("must provide data")
-        args = cls._init_args_from_config(cp)
-        args['data'] = data
-        args.update(kwargs)
-
-        variable_params = args['variable_params']
-        try:
-            static_params = args['static_params']
-        except KeyError:
-            static_params = {}
-
-        # set up waveform generator
-        try:
-            approximant = static_params['approximant']
-        except KeyError:
-            raise ValueError("no approximant provided in the static args")
-        generator_function = generator.select_waveform_generator(approximant)
-        waveform_generator = generator.FDomainDetFrameGenerator(
-            generator_function, epoch=data.values()[0].start_time,
-            variable_args=variable_params, detectors=data.keys(),
-            delta_f=delta_f, delta_t=delta_t,
-            recalib=recalibration, gates=gates,
-            **static_params)
-        args['waveform_generator'] = waveform_generator
-
-        return cls(**args)
+        return dict(zip(names, self.getstats(names, default=default)))
 
 
 class SamplingTransforms(object):
@@ -693,9 +113,9 @@ class SamplingTransforms(object):
 
     def __init__(self, variable_params, sampling_params,
                  replace_parameters, sampling_transforms):
-        assert(len(replace_parameters) == len(sampling_params),
-               "number of sampling parameters must be the "
-               "same as the number of replace parameters")
+        assert len(replace_parameters) == len(sampling_params), (
+            "number of sampling parameters must be the "
+            "same as the number of replace parameters")
         # pull out the replaced parameters
         self.sampling_params = [arg for arg in variable_params
                                 if arg not in replace_parameters]
@@ -787,8 +207,8 @@ class SamplingTransforms(object):
         SamplingTransforms
             A sampling transforms class.
         """
-        assert(cp.has_section('sampling_params'),
-               "no sampling_params section found in config file")
+        if not cp.has_section('sampling_params'):
+            raise ValueError("no sampling_params section found in config file")
         # get sampling transformations
         sampling_params, replace_parameters = \
             read_sampling_params_from_config(cp)
@@ -851,3 +271,465 @@ def read_sampling_params_from_config(cp, section_group=None,
         sampling_params.update(set(map(str.strip, map_args.split(','))))
         replaced_params.update(set(map(str.strip, args.split(','))))
     return list(sampling_params), list(replaced_params)
+
+
+#
+# =============================================================================
+#
+#                               Base model definition
+#
+# =============================================================================
+#
+
+
+class BaseModel(object):
+    r"""Base class for all models.
+
+    Given some model :math:`h` with parameters :math:`\Theta`, Bayes Theorem
+    states that the probability of observing parameter values :math:`\vartheta`
+    is:
+
+    .. math::
+
+        p(\vartheta|h) = \frac{p(h|\vartheta) p(\vartheta)}{p(h)}.
+
+    Here:
+
+     * :math:`p(\vartheta|h)` is the **posterior** probability;
+
+     * :math:`p(h|\vartheta)` is the **likelihood**;
+
+     * :math:`p(\vartheta)` is the **prior**;
+
+     * :math:`p(h)` is the **evidence**.
+
+    This class defines properties and methods for evaluating the log
+    likelihood, log prior, and log posteror. A set of parameter values is set
+    using the ``update`` method. Calling the class's
+    ``log(likelihood|prior|posterior)`` properties will then evaluate the model
+    at those parameter values.
+
+    Classes that inherit from this class must implement a ``_loglikelihood``
+    function that can be called by ``loglikelihood``.
+
+    Parameters
+    ----------
+    variable_params : (tuple of) string(s)
+        A tuple of parameter names that will be varied.
+    static_params : dict, optional
+        A dictionary of parameter names -> values to keep fixed.
+    prior : callable, optional
+        A callable class or function that computes the log of the prior. If
+        None provided, will use ``_noprior``, which returns 0 for all parameter
+        values.
+    sampling_params : list, optional
+        Replace one or more of the ``variable_params`` with the given
+        parameters for sampling.
+    replace_parameters : list, optional
+        The ``variable_params`` to replace with sampling parameters. Must be
+        the same length as ``sampling_params``.
+    sampling_transforms : list, optional
+        List of transforms to use to go between the ``variable_params`` and the
+        sampling parameters. Required if ``sampling_params`` is not None.
+
+    Properties
+    ----------
+    logjacobian :
+        Returns the log of the jacobian needed to go from the parameter space
+        of the ``variable_params`` to the sampling params.
+    logprior :
+        Returns the log of the prior.
+    loglikelihood :
+        A function that returns the log of the likelihood function.
+    logposterior :
+        A function that returns the log of the posterior.
+    loglr :
+        A function that returns the log of the likelihood ratio.
+    logplr :
+        A function that returns the log of the prior-weighted likelihood ratio.
+    """
+    __metaclass__ = ABCMeta
+    name = None
+
+    def __init__(self, variable_params, static_params=None, prior=None,
+                 sampling_transforms=None):
+        # store variable and static args
+        if isinstance(variable_params, basestring):
+            variable_params = (variable_params,)
+        if not isinstance(variable_params, tuple):
+            variable_params = tuple(variable_params)
+        self._variable_params = variable_params
+        if static_params is None:
+            static_params = {}
+        self._static_params = static_params
+        # store prior
+        if prior is None:
+            self.prior_distribution = _NoPrior()
+        else:
+            assert prior.variable_args == variable_params, (
+                "variable params of prior and model must be the same")
+            self.prior_distribution = prior
+        # store sampling transforms
+        self.sampling_transforms = sampling_transforms
+        # initialize current params to None
+        self._current_params = None
+        # initialize a model stats
+        self._current_stats = ModelStats()
+
+    @property
+    def variable_params(self):
+        """Returns the model parameters."""
+        return self._variable_params
+
+    @property
+    def static_params(self):
+        """Returns the model's static arguments."""
+        return self._static_params
+
+    @property
+    def sampling_params(self):
+        """Returns the sampling parameters.
+
+        If ``sampling_transforms`` is None, this is the same as the
+        ``variable_params``.
+        """
+        if self.sampling_transforms is None:
+            sampling_params = self.variable_params
+        else:
+            sampling_params = self.sampling_transforms.sampling_params
+        return sampling_params
+
+    def update(self, **params):
+        """Updates the current parameter positions and resets stats.
+
+        If any sampling transforms are specified, they are applied to the
+        params before being stored.
+        """
+        self._current_params = self._transform_params(**params)
+        self._current_stats = ModelStats()
+
+    @property
+    def current_params(self):
+        if self._current_params is None:
+            raise ValueError("no parameters values currently stored; "
+                             "run update to add some")
+        return self._current_params
+
+    @property
+    def default_stats(self):
+        """The stats that ``get_current_stats`` returns by default."""
+        return ['logjacobian', 'logprior', 'loglikelihood']
+
+    def get_current_stats(self, names=None):
+        """Return one or more of the current stats as a tuple.
+
+        This function does no computation. It only returns what has already
+        been calculated. If a stat hasn't been calculated, it will be returned
+        as ``numpy.nan``.
+
+        Parameters
+        ----------
+        names : list of str, optional
+            Specify the names of the stats to retrieve. If ``None`` (the
+            default), will return ``default_stats``.
+
+        Returns
+        -------
+        tuple :
+            The current values of the requested stats, as a tuple. The order
+            of the stats is the same as the names.
+        """
+        if names is None:
+            names = self.default_stats
+        return self._current_stats.getstats(names)
+
+    @property
+    def current_stats(self):
+        """Return the ``default_stats`` as a dict.
+
+        This does no computation. It only returns what has already been
+        calculated. If a stat hasn't been calculated, it will be returned
+        as ``numpy.nan``.
+
+        Returns
+        -------
+        dict :
+            Dictionary of stat names -> current stat values.
+        """
+        return self._current_stats.getstatsdict(self.default_stats)
+
+    def _trytoget(self, statname, fallback, **kwargs):
+        """Helper function to get a stat from ``_current_stats``.
+
+        If the statistic hasn't been calculated, ``_current_stats`` will raise
+        an ``AttributeError``. In that case, the ``fallback`` function will
+        be called. If that call is successful, the ``statname`` will be added
+        to ``_current_stats`` with the returned value.
+
+        Parameters
+        ----------
+        statname : str
+            The stat to get from ``current_stats``.
+        fallback : method of self
+            The function to call if the property call fails.
+        \**kwargs :
+            Any other keyword arguments are passed through to the function.
+
+        Returns
+        -------
+        float :
+            The value of the property.
+        """
+        try:
+            return getattr(self._current_stats, statname)
+        except AttributeError:
+            val = fallback(**kwargs)
+            setattr(self._current_stats, statname, val)
+            return val
+
+    @property
+    def loglikelihood(self):
+        """The log likelihood at the current parameters.
+
+        This will initially try to return the ``current_stats.loglikelihood``.
+        If that raises an ``AttributeError``, will call `_loglikelihood`` to
+        calculate it and store it to ``current_stats``.
+        """
+        return self._trytoget('loglikelihood', self._loglikelihood)
+
+    @abstractmethod
+    def _loglikelihood(self):
+        """Low-level function that calculates the log likelihood of the current
+        params."""
+        pass
+
+    @property
+    def logjacobian(self):
+        """The log jacobian of the sampling transforms at the current postion.
+
+        If no sampling transforms were provided, will just return 0.
+
+        Parameters
+        ----------
+        \**params :
+            The keyword arguments should specify values for all of the variable
+            args and all of the sampling args.
+
+        Returns
+        -------
+        float :
+            The value of the jacobian.
+        """
+        return self._trytoget('logjacobian', self._logjacobian)
+
+    def _logjacobian(self):
+        """Calculates the logjacobian of the current parameters."""
+        if self.sampling_transforms is None:
+            logj = 0.
+        else:
+            logj = self.sampling_transforms.logjacobian(
+                **self.current_params)
+        return logj
+
+    @property
+    def logprior(self):
+        """Returns the log prior at the current parameters."""
+        return self._trytoget('logprior', self._logprior)
+
+    def _logprior(self):
+        """Calculates the log prior at the current parameters."""
+        logj = self.logjacobian
+        logp = self.prior_distribution(**self.current_params) + logj
+        if numpy.isnan(logp):
+            logp = -numpy.inf
+        return logp
+
+    @property
+    def logposterior(self):
+        """Returns the log of the posterior of the current parameter values.
+
+        The logprior is calculated first. If the logprior returns ``-inf``
+        (possibly indicating a non-physical point), then the ``loglikelihood``
+        is not called.
+        """
+        logp = self.logprior
+        if logp == -numpy.inf:
+            return logp
+        else:
+            return logp + self.loglikelihood
+
+    def prior_rvs(self, size=1, prior=None):
+        """Returns random variates drawn from the prior.
+
+        If the ``sampling_params`` are different from the ``variable_params``,
+        the variates are transformed to the `sampling_params` parameter space
+        before being returned.
+
+        Parameters
+        ----------
+        size : int, optional
+            Number of random values to return for each parameter. Default is 1.
+        prior : JointDistribution, optional
+            Use the given prior to draw values rather than the saved prior.
+
+        Returns
+        -------
+        FieldArray
+            A field array of the random values.
+        """
+        # draw values from the prior
+        if prior is None:
+            prior = self.prior_distribution
+        p0 = prior.rvs(size=size)
+        # transform if necessary
+        if self.sampling_transforms is not None:
+            ptrans = self.sampling_transforms.apply(p0)
+            # pull out the sampling args
+            p0 = FieldArray.from_arrays([ptrans[arg]
+                                         for arg in self.sampling_params],
+                                        names=self.sampling_params)
+        return p0
+
+    def _transform_params(self, **params):
+        """Applies all transforms to the given params.
+
+        Parameters
+        ----------
+        \**params :
+            Key, value pairs of parameters to apply the transforms to.
+
+        Returns
+        -------
+        dict
+            A dictionary of the transformed parameters.
+        """
+        # apply inverse transforms to go from sampling parameters to
+        # variable args
+        if self.sampling_transforms is not None:
+            params = self.sampling_transforms.apply(params, inverse=True)
+        # apply boundary conditions
+        params = self.prior_distribution.apply_boundary_conditions(**params)
+        return params
+
+    #
+    # Methods for initiating from a config file.
+    #
+    @staticmethod
+    def extra_args_from_config(cp, section, skip_args=None, dtypes=None):
+        """Gets any additional keyword in the given config file.
+
+        Parameters
+        ----------
+        cp : WorkflowConfigParser
+            Config file parser to read.
+        section : str
+            The name of the section to read.
+        skip_args : list of str, optional
+            Names of arguments to skip.
+        dtypes : dict, optional
+            A dictionary of arguments -> data types. If an argument is found
+            in the dict, it will be cast to the given datatype. Otherwise, the
+            argument's value will just be read from the config file (and thus
+            be a string).
+
+        Returns
+        -------
+        dict
+            Dictionary of keyword arguments read from the config file.
+        """
+        kwargs = {}
+        if dtypes is None:
+            dtypes = {}
+        if skip_args is None:
+            skip_args = []
+        read_args = [opt for opt in cp.options(section)
+                     if opt not in skip_args]
+        for opt in read_args:
+            val = cp.get(section, opt)
+            # try to cast the value if a datatype was specified for this opt
+            try:
+                val = dtypes[opt](val)
+            except KeyError:
+                pass
+            kwargs[opt] = val
+        return kwargs
+
+    @staticmethod
+    def prior_from_config(cp, variable_params, prior_section,
+                          constraint_section):
+        """Gets arguments and keyword arguments from a config file.
+
+        Parameters
+        ----------
+        cp : WorkflowConfigParser
+            Config file parser to read.
+        variable_params : list
+            List of of model parameter names.
+        prior_section : str
+            Section to read prior(s) from.
+        constraint_section : str
+            Section to read constraint(s) from.
+
+        Returns
+        -------
+        pycbc.distributions.JointDistribution
+            The prior.
+        """
+        # get prior distribution for each variable parameter
+        logging.info("Setting up priors for each parameter")
+        dists = distributions.read_distributions_from_config(cp, prior_section)
+        constraints = distributions.read_constraints_from_config(
+            cp, constraint_section)
+        return distributions.JointDistribution(variable_params, *dists,
+                                               constraints=constraints)
+
+    @classmethod
+    def _init_args_from_config(cls, cp):
+        """Helper function for loading parameters."""
+        section = "model"
+        prior_section = "prior"
+        vparams_section = 'variable_params'
+        sparams_section = 'static_params'
+        constraint_section = 'constraint'
+        # check that the name exists and matches
+        name = cp.get(section, 'name')
+        if name != cls.name:
+            raise ValueError("section's {} name does not match mine {}".format(
+                             name, cls.name))
+        # get model parameters
+        variable_params, static_params = distributions.read_params_from_config(
+            cp, prior_section=prior_section, vargs_section=vparams_section,
+            sargs_section=sparams_section)
+        # get prior
+        prior = cls.prior_from_config(cp, variable_params, prior_section,
+                                      constraint_section)
+        args = {'variable_params': variable_params,
+                'static_params': static_params,
+                'prior': prior}
+        # get any other keyword arguments provided
+        args.update(cls.extra_args_from_config(cp, section,
+                                               skip_args=['name']))
+        return args
+
+    @classmethod
+    def from_config(cls, cp, **kwargs):
+        """Initializes an instance of this class from the given config file.
+
+        Parameters
+        ----------
+        cp : WorkflowConfigParser
+            Config file parser to read.
+        \**kwargs :
+            All additional keyword arguments are passed to the class. Any
+            provided keyword will over ride what is in the config file.
+        """
+        args = cls._init_args_from_config(cp)
+        # try to load sampling transforms
+        try:
+            sampling_transforms = SamplingTransforms.from_config(
+                cp, args['variable_params'])
+        except ValueError:
+            sampling_transforms = None
+        args['sampling_transforms'] = sampling_transforms
+        args.update(kwargs)
+        return cls(**args)

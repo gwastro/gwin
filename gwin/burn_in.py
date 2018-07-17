@@ -53,7 +53,7 @@ def ks_test(sampler, fp, threshold=0.9):
     # satisfies the KS test
     is_burned_in_param = {}
     # iterate over the parameters
-    for param in fp.variable_args:
+    for param in fp.variable_params:
         # read samples for the parameter from the last iteration of the chain
         samples_last_iter = sampler.read_samples(fp, param, iteration=-1,
                                                  flatten=True)[param]
@@ -141,10 +141,10 @@ def max_posterior(sampler, fp):
     # Note: multi-tempered samplers should just return the coldest chain by
     # default
     chain_stats = sampler.read_samples(
-        fp, ['loglr', 'prior'], samples_group=fp.stats_group,
+        fp, ['loglr', 'logprior'], samples_group=fp.stats_group,
         thin_interval=1, thin_start=0, thin_end=None, flatten=False)
-    chain_posteriors = chain_stats['loglr'] + chain_stats['prior']
-    dim = float(len(fp.variable_args))
+    chain_posteriors = chain_stats['loglr'] + chain_stats['logprior']
+    dim = float(len(fp.variable_params))
 
     # find the posterior to compare against
     max_p = chain_posteriors.max()
@@ -193,11 +193,11 @@ def posterior_step(sampler, fp):
     # Note: multi-tempered samplers should just return the coldest chain by
     # default
     chain_stats = sampler.read_samples(
-        fp, ['loglr', 'prior'], samples_group=fp.stats_group,
+        fp, ['loglr', 'logprior'], samples_group=fp.stats_group,
         thin_interval=1, thin_start=0, thin_end=None, flatten=False)
-    chain_posteriors = chain_stats['loglr'] + chain_stats['prior']
+    chain_posteriors = chain_stats['loglr'] + chain_stats['logprior']
     nwalkers = chain_posteriors.shape[-2]
-    dim = float(len(fp.variable_args))
+    dim = float(len(fp.variable_params))
     burn_in_idx = numpy.zeros(nwalkers).astype(int)
     criteria = dim/2.
 

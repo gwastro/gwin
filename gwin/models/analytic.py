@@ -44,14 +44,29 @@ class TestNormal(BaseModel):
     **kwargs :
         All other keyword arguments are passed to ``BaseModel``.
 
+    Examples
+    --------
+    Create a 2D model with zero mean and unit variance:
+
+    >>> m = TestNormal(['x', 'y'])
+
+    Set the current parameters and evaluate the log posterior:
+
+    >>> m.update(x=-0.2, y=0.1)
+    >>> m.logposterior
+    -1.8628770664093453
+
+    See the current stats that were evaluated:
+
+    >>> m.current_stats
+    {'logjacobian': 0.0, 'loglikelihood': -1.8628770664093453, 'logprior': 0.0}
+
     """
     name = "test_normal"
 
     def __init__(self, variable_params, mean=None, cov=None, **kwargs):
         # set up base likelihood parameters
         super(TestNormal, self).__init__(variable_params, **kwargs)
-        # set the lognl to 0 since there is no data
-        self.set_lognl(0.)
         # store the pdf
         if mean is None:
             mean = [0.]*len(variable_params)
@@ -63,10 +78,11 @@ class TestNormal(BaseModel):
             raise ValueError("dimension mis-match between variable_params and "
                              "mean and/or cov")
 
-    def loglikelihood(self, **params):
+    def _loglikelihood(self):
         """Returns the log pdf of the multivariate normal.
         """
-        return self._dist.logpdf([params[p] for p in self.variable_params])
+        return self._dist.logpdf([self.current_params[p]
+                                  for p in self.variable_params])
 
 
 class TestEggbox(BaseModel):
@@ -94,14 +110,11 @@ class TestEggbox(BaseModel):
         # set up base likelihood parameters
         super(TestEggbox, self).__init__(variable_params, **kwargs)
 
-        # set the lognl to 0 since there is no data
-        self.set_lognl(0.)
-
-    def loglikelihood(self, **params):
+    def _loglikelihood(self):
         """Returns the log pdf of the eggbox function.
         """
         return (2 + numpy.prod(numpy.cos([
-            params[p]/2. for p in self.variable_params]))) ** 5
+            self.current_params[p]/2. for p in self.variable_params]))) ** 5
 
 
 class TestRosenbrock(BaseModel):
@@ -129,14 +142,11 @@ class TestRosenbrock(BaseModel):
         # set up base likelihood parameters
         super(TestRosenbrock, self).__init__(variable_params, **kwargs)
 
-        # set the lognl to 0 since there is no data
-        self.set_lognl(0.)
-
-    def loglikelihood(self, **params):
+    def _loglikelihood(self):
         """Returns the log pdf of the Rosenbrock function.
         """
         logl = 0
-        p = [params[p] for p in self.variable_params]
+        p = [self.current_params[p] for p in self.variable_params]
         for i in range(len(p) - 1):
             logl -= ((1 - p[i])**2 + 100 * (p[i+1] - p[i]**2)**2)
         return logl
@@ -170,13 +180,10 @@ class TestVolcano(BaseModel):
             raise ValueError("TestVolcano distribution requires exactly "
                              "two variable args")
 
-        # set the lognl to 0 since there is no data
-        self.set_lognl(0.)
-
-    def loglikelihood(self, **params):
+    def _loglikelihood(self):
         """Returns the log pdf of the 2D volcano function.
         """
-        p = [params[p] for p in self.variable_params]
+        p = [self.current_params[p] for p in self.variable_params]
         r = numpy.sqrt(p[0]**2 + p[1]**2)
         mu, sigma = 5.0, 2.0
         return 25 * (
