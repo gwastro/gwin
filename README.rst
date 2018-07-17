@@ -11,6 +11,14 @@ Installation
 
    pip install gwin
 
+
+Documentation
+=============
+
+- https://gwin.readthedocs.io/
+
+
+
 .. -- images -----------------------------------------------------------------
 
 .. |PyPI| image:: https://badge.fury.io/py/gwin.svg
