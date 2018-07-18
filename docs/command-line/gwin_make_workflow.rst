@@ -72,7 +72,7 @@ A simple workflow configuration file::
     nwalkers = 5000
     update-interval = 500
     n-independent-samples = 5000
-    burn-in-function = max_poseterior
+    burn-in-function = max_posterior
     save-psd =
     save-strain =
     save-stilde =
