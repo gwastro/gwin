@@ -12,170 +12,19 @@ The executable ``gwin_make_workflow`` is a workflow generator to setup a paramet
 Workflow configuration file
 ===========================
 
-A simple workflow configuration file::
+A simple workflow configuration file
 
-    [workflow]
-    ; basic information used by the workflow generator
-    file-retention-level = all_triggers
-    h1-channel-name = H1:DCS-CALIB_STRAIN_C02
-    l1-channel-name = L1:DCS-CALIB_STRAIN_C02
-
-    [workflow-ifos]
-    ; the IFOs to analyze
-    h1 =
-    l1 =
-
-    [workflow-datafind]
-    ; how the workflow generator should get frame data
-    datafind-h1-frame-type = H1_HOFT_C02
-    datafind-l1-frame-type = L1_HOFT_C02
-    datafind-method = AT_RUNTIME_SINGLE_FRAMES
-    datafind-check-segment-gaps = raise_error
-    datafind-check-frames-exist = raise_error
-    datafind-check-segment-summary = no_test
-
-    [workflow-inference]
-    ; how the workflow generator should setup inference nodes
-    num-events = 1
-    plot-1d-mass = mass1 mass2 mchirp q
-    plot-1d-orientation = ra dec tc polarization inclination coa_phase
-    plot-1d-distance = distance redshift
-
-    [executables]
-    ; paths to executables to use in workflow
-    inference = ${which:run_gwin}
-    inference_posterior = ${which:gwin_plot_posterior}
-    inference_prior = ${which:gwin_plot_prior}
-    inference_rate = ${which:gwin_plot_acceptance_rate}
-    inference_samples = ${which:gwin_plot_samples}
-    inference_table = ${which:gwin_table_summary}
-    plot_spectrum = ${which:pycbc_plot_psd_file}
-    results_page = ${which:pycbc_make_html_page}
-
-    [datafind]
-    ; datafind options
-    urltype = file
-
-    [inference]
-    ; command line options use --help for more information
-    sample-rate = 2048
-    low-frequency-cutoff = 20
-    strain-high-pass = 15
-    pad-data = 8
-    psd-estimation = median
-    psd-segment-length = 16
-    psd-segment-stride = 8
-    psd-inverse-length = 16
-    processing-scheme = cpu
-    checkpoint-interval = 1000
-    sampler = kombine
-    nwalkers = 5000
-    update-interval = 500
-    n-independent-samples = 5000
-    burn-in-function = max_posterior
-    save-psd =
-    save-strain =
-    save-stilde =
-    nprocesses = 12
-    resume-from-checkpoint =
-
-    [pegasus_profile-inference]
-    ; pegasus profile for inference nodes
-    condor|request_memory = 20G
-    condor|request_cpus = 12
-
-    [inference_posterior]
-    ; command line options use --help for more information
-    plot-density =
-    plot-contours =
-    plot-marginal =
-
-    [inference_prior]
-    ; command line options use --help for more information
-
-    [inference_rate]
-    ; command line options use --help for more information
-
-    [inference_samples]
-    ; command line options use --help for more information
-
-    [inference_table]
-    ; command line options use --help for more information
-
-    [plot_spectrum]
-    ; command line options use --help for more information
-
-    [results_page]
-    ; command line options use --help for more information
-    analysis-title = "PyCBC Inference Test"
+.. literalinclude:: ../../examples/workflow/GW150914_example/workflow.ini
+   :language: ini
 
 ============================
 Inference configuration file
 ============================
 
-You will also need a configuration file with sections that tells ``gwin`` how to construct the priors. A simple inference configuration file is::
+You will also need a configuration file with sections that tells ``gwin`` how to construct the priors. A simple inference configuration file is
 
-    [model]
-    name = gaussian_noise
-
-    [variable_params]
-    ; parameters to vary in inference sampler
-    tc =
-    mass1 =
-    mass2 =
-    distance =
-    coa_phase =
-    inclination =
-    ra =
-    dec =
-    polarization =
-
-    [static_params]
-    ; parameters that do not vary in inference sampler
-    approximant = SEOBNRv2_ROM_DoubleSpin
-    f_lower = 28.0
-
-    [prior-tc]
-    ; how to construct prior distribution
-    name = uniform
-    min-tc = 1126259462.2
-    max-tc = 1126259462.6
-
-    [prior-mass1]
-    ; how to construct prior distribution
-    name = uniform
-    min-mass1 = 10.
-    max-mass1 = 80.
-
-    [prior-mass2]
-    ; how to construct prior distribution
-    name = uniform
-    min-mass2 = 10.
-    max-mass2 = 80.
-
-    [prior-distance]
-    ; how to construct prior distribution
-    name = uniform
-    min-distance = 10
-    max-distance = 500
-
-    [prior-coa_phase]
-    ; how to construct prior distribution
-    name = uniform_angle
-    ; uniform_angle defaults to [0,2pi), so we
-    ; don't need to specify anything here
-
-    [prior-inclination]
-    ; how to construct prior distribution
-    name = sin_angle
-
-    [prior-ra+dec]
-    ; how to construct prior distribution
-    name = uniform_sky
-
-    [prior-polarization]
-    ; how to construct prior distribution
-    name = uniform_angle
+.. literalinclude:: ../../examples/workflow/GW150914_example/gwin.ini
+   :language: ini
 
 A simple configuration file for parameter estimation on the ringdown is::
 
