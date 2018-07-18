@@ -67,9 +67,9 @@ distribution that requires no data or waveform generation; see the section
 below on running on an analytic distribution for more details.
 
 The other two required sections are ``[variable_params]``, and ``[static_params]``.
-The ``[variable_params]`` section contains a list of parameters that will be
-varied to obtain a posterior distribution. The ``[static_params]`` section
-contains a list of parameters that are held fixed through out the run.
+The ``[variable_params]`` section contains a list of parameters in which the prior
+will be defined, and that will varied to obtain a posterior distribution. The ``[static_params]`` 
+section contains a list of parameters that are held fixed through out the run.
 
 Each parameter in ``[variable_params]`` must have a subsection in ``[prior]``.
 To create a subsection use the ``-`` char, e.g. for one of the mass parameters do ``[prior-mass1]``.
