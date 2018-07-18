@@ -36,7 +36,7 @@ A simple workflow configuration file::
     [executables]
     ; paths to executables to use in workflow
     create_injections = ${which:pycbc_create_injections}
-    inference = ${which:gwin}
+    inference = ${which:run_gwin}
     inference_intervals = ${which:gwin_plot_inj_intervals}
     inference_posterior = ${which:gwin_plot_posterior}
     inference_rate = ${which:gwin_plot_acceptance_rate}

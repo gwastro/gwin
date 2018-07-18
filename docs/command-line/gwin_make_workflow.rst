@@ -43,12 +43,12 @@ A simple workflow configuration file::
 
     [executables]
     ; paths to executables to use in workflow
-    inference = ${which:pycbc_inference}
-    inference_posterior = ${which:pycbc_inference_plot_posterior}
-    inference_prior = ${which:pycbc_inference_plot_prior}
-    inference_rate = ${which:pycbc_inference_plot_acceptance_rate}
-    inference_samples = ${which:pycbc_inference_plot_samples}
-    inference_table = ${which:pycbc_inference_table_summary}
+    inference = ${which:run_gwin}
+    inference_posterior = ${which:gwin_plot_posterior}
+    inference_prior = ${which:gwin_plot_prior}
+    inference_rate = ${which:gwin_plot_acceptance_rate}
+    inference_samples = ${which:gwin_plot_samples}
+    inference_table = ${which:gwin_table_summary}
     plot_spectrum = ${which:pycbc_plot_psd_file}
     results_page = ${which:pycbc_make_html_page}
 
@@ -113,7 +113,7 @@ A simple workflow configuration file::
 Inference configuration file
 ============================
 
-You will also need a configuration file with sections that tells ``pycbc_inference`` how to construct the priors. A simple inference configuration file is::
+You will also need a configuration file with sections that tells ``gwin`` how to construct the priors. A simple inference configuration file is::
 
     [model]
     name = gaussian_noise
@@ -281,19 +281,19 @@ Else you can run from a specific GPS end time with the ``--gps-end-time`` option
         --output-file ${WORKFLOW_NAME}.dax \
         --output-map ${OUTPUT_MAP_PATH} \
         --gps-end-time ${GPS_END_TIME} \
-        --config-overrides workflow:start-time:$((${GPS_END_TIME}-2)) \
-                           workflow:end-time:$((${GPS_END_TIME}+2)) \
+        --config-overrides workflow:start-time:$((${GPS_END_TIME}-16)) \
+                           workflow:end-time:$((${GPS_END_TIME}+16)) \
                            workflow-inference:data-seconds-before-trigger:2 \
                            workflow-inference:data-seconds-after-trigger:2 \
                            inference:psd-start-time:$((${GPS_END_TIME}-300)) \
-                           inference:psd-end-time:$((${GPS_END_TIME}+1748)) \
+                           inference:psd-end-time:$((${GPS_END_TIME}+748)) \
                            results_page:output-path:${HTML_DIR} \
                            results_page:analysis-subtitle:${WORKFLOW_NAME}
 
 
 Where ``${GPS_END_TIME}`` is the GPS end time of the trigger.
 
-For the CBC example above define the environment variables ``GPS_END_TIME=1126259462`` and ``OUTPUT_MAP_PATH=output.map``. 
+For the CBC example above define the environment variables ``GPS_END_TIME=1126259462`` and ``OUTPUT_MAP_PATH=output.map``.
 
 =============================
 Plan and execute the workflow
