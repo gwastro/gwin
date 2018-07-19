@@ -7,9 +7,19 @@ A python package for Bayesian Inference of gravitational-wave experimental data.
 Installation
 =============
 
+You can download the latest gwin release from pypi using pip
+
 ::
 
    pip install gwin
+
+If you want to install from source then
+`clone the repository <https://github.com/gwastro/gwin/blob/master/CONTRIBUTING.md>`_
+and then run the following in your source code directory.
+
+::
+
+   pip install .
 
 
 Documentation
