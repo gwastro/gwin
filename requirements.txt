@@ -3,6 +3,5 @@ scipy
 matplotlib
 h5py
 pycbc>=1.11.1
-corner
 http://download.pegasus.isi.edu/pegasus/4.8.1/pegasus-python-source-4.8.1.tar.gz#egg=pegasus-wms-4.8.1
 mock ; python_version < '3'

@@ -45,7 +45,6 @@ install_requires = [
     'matplotlib',
     'scipy',
     'h5py',
-    'corner',
 ]
 
 try:  # try to detect system install of lalinference
