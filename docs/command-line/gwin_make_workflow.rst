@@ -78,11 +78,19 @@ A simple configuration file for parameter estimation on the ringdown is::
 
 If you want to use another variable parameter in the inference sampler then add its name to ``[variable_params]`` and add a prior section like shown above.
 
+When working on real data, it is necessary to marginalise over calibration uncertainty.
+The model and parameters describing the calibration uncertainty can be passed in another ini file, e.g.:
+
+.. literalinclude:: ../../examples/workflow/GW150914_example/calibration.ini
+:language: ini
+
 =====================
 Generate the workflow
 =====================
 
-To generate a workflow you will need your configuration files. We set the following enviroment variables for this example::
+To generate a workflow you will need your configuration files.
+The workflow creates a single config file ``inference.ini`` from all the files specified in ``INFERENCE_CONFIG_PATH``.
+We set the following enviroment variables for this example::
 
     # name of the workflow
     WORKFLOW_NAME="r1"
@@ -92,7 +100,7 @@ To generate a workflow you will need your configuration files. We set the follow
 
     # input configuration files
     CONFIG_PATH=workflow.ini
-    INFERENCE_CONFIG_PATH=gwin.ini
+    INFERENCE_CONFIG_PATH="gwin.ini calibration.ini"
 
 Specify a directory to save the HTML pages::
 
