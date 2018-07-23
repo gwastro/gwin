@@ -82,7 +82,7 @@ When working on real data, it is necessary to marginalise over calibration uncer
 The model and parameters describing the calibration uncertainty can be passed in another ini file, e.g.:
 
 .. literalinclude:: ../../examples/workflow/GW150914_example/calibration.ini
-:language: ini
+   :language: ini
 
 =====================
 Generate the workflow
