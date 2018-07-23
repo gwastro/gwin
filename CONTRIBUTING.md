@@ -76,10 +76,10 @@ git checkout -b my-new-feature gwastro/master
 
 ### Open a Pull Request
 
-When you feel that your work is finished, you should create a Pull Request to propose that your changes be merged into the main (`gwastro`) repository.
+When you feel that your work is finished, or if you want feedback on it, you should create a Pull Request to propose that your changes be merged into the main (`gwastro`) repository.
 
 After you have pushed your new feature branch to `origin`, you should find a new button on the [GWIn repository home page](https://github.com/gwastro/gwin/) inviting you to create a Pull Request out of your newly pushed branch.
-You should click the button, and proceed to fill in the title and description boxes on the PR page.
+You should click the button, and proceed to fill in the title and description boxes on the PR page. If you are still working on the pull request and don’t want it to be merged accidentally, add the string "wip", "work in progress" or "do not merge" (not case-sensitive), to the title.
 
 Once the request has been opened, one of the maintainers will assign someone to review the change.
 
