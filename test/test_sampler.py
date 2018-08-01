@@ -101,11 +101,20 @@ class TestSamplers(_TestBase):
     def model(self, fd_waveform, fd_waveform_generator, prior_eval,
               zdhp_psd, request):
         eval_class = models.models[request.param]
-        model = eval_class(
-            fd_waveform_generator.variable_args,
-            fd_waveform, fd_waveform_generator,
-            self.fmin, psds={ifo: zdhp_psd for ifo in self.ifos},
-            prior=prior_eval)
+        if request.param == "marginalized_gaussian_noise":
+            # Test that the sampler works for time_marginalization
+            model = eval_class(
+                fd_waveform_generator.variable_args,
+                fd_waveform, fd_waveform_generator,
+                self.fmin, psds={ifo: zdhp_psd for ifo in self.ifos},
+                prior=prior_eval, time_marginalization=True,
+                marg_prior=[distributions.Uniform(time=(0, 10000))])
+        else:
+            model = eval_class(
+                fd_waveform_generator.variable_args,
+                fd_waveform, fd_waveform_generator,
+                self.fmin, psds={ifo: zdhp_psd for ifo in self.ifos},
+                prior=prior_eval)
         return models.CallModel(model, "logposterior", return_all_stats=False)
 
     # -- actual tests ---------------------------

@@ -1,4 +1,4 @@
-# Copyright (C) 2018 Duncan Macleod
+# Copyright (C) 2018 Duncan Macleod, Charlie Hoy
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -18,6 +18,9 @@ import pytest
 
 import numpy
 from numpy import isclose
+
+from pycbc.workflow import WorkflowConfigParser
+from pycbc import distributions
 
 from gwin import models
 
@@ -58,7 +61,7 @@ class TestBaseModel(_TestBase):
         cls.data = range(10)
 
     @pytest.fixture(scope='function')
-    def simple(self):
+    def simple(self, request):
         model = self.TEST_CLASS([])
         return self.CALL_CLASS(model, self.DEFAULT_CALLSTAT)
 
@@ -87,14 +90,14 @@ class TestGaussianNoise(TestBaseModel):
     DEFAULT_CALLSTAT = 'logplr'
 
     @pytest.fixture(scope='function')
-    def simple(self, random_data, fd_waveform_generator):
+    def simple(self, random_data, fd_waveform_generator, request):
         data = {ifo: random_data for ifo in self.ifos}
         model = self.TEST_CLASS([], data, fd_waveform_generator,
                                 f_lower=self.fmin)
         return self.CALL_CLASS(model, self.DEFAULT_CALLSTAT)
 
     @pytest.fixture(scope='function')
-    def full(self, fd_waveform, fd_waveform_generator, zdhp_psd):
+    def full(self, fd_waveform, fd_waveform_generator, zdhp_psd, request):
         model = self.TEST_CLASS(
             ['tc'], fd_waveform, fd_waveform_generator, self.fmin,
             psds={ifo: zdhp_psd for ifo in self.ifos})
@@ -114,3 +117,66 @@ class TestGaussianNoise(TestBaseModel):
         # evaluate model and check recovery
         stats = [full([t]) for t in times]
         assert isclose(times[numpy.argmax(stats)], target)
+
+# -- MarginalizedGaussianNoise --------------------------------------------
+
+
+class TestMarginalizedGaussianNoise(TestGaussianNoise):
+    """Tests MarginalizedGaussianNoise."""
+    TEST_CLASS = models.MarginalizedGaussianNoise
+    DEFAULT_CALLSTAT = 'logplr'
+
+    @pytest.fixture(scope='function')
+    def simple(self, random_data, fd_waveform_generator):
+        marg_prior = [distributions.Uniform(distance=(50, 5000))]
+        data = {ifo: random_data for ifo in self.ifos}
+        model = self.TEST_CLASS([], data, fd_waveform_generator,
+                                f_lower=self.fmin,
+                                distance_marginalization=True,
+                                marg_prior=marg_prior)
+        return self.CALL_CLASS(model, self.DEFAULT_CALLSTAT)
+
+    @pytest.fixture(scope='function')
+    def full(self, fd_waveform, fd_waveform_generator, zdhp_psd, request):
+        marg_prior = [distributions.Uniform(distance=(50, 5000))]
+        model = self.TEST_CLASS(
+            ['tc'], fd_waveform, fd_waveform_generator, self.fmin,
+            psds={ifo: zdhp_psd for ifo in self.ifos},
+            distance_marginalization=True, marg_prior=marg_prior)
+        return self.CALL_CLASS(model, self.DEFAULT_CALLSTAT,
+                               return_all_stats=False)
+
+    def test_from_config(self, random_data, request):
+        """Test the function which loads data from a configuration file. Here
+        we assume we are just marginalizing over distance with a uniform prior
+        [50, 5000)
+        """
+        param = {"approximant": "IMRPhenomPv2", "f_lower": "20", "f_ref": "20",
+                 "ra": "1.5", "dec": "-0.5", "polarization": "0.5"}
+
+        cp = WorkflowConfigParser()
+        cp.add_section("model")
+        cp.set("model", "name", "marginalized_gaussian_noise")
+        cp.set("model", "distance_marginalization", "")
+        cp.add_section("marginalized_prior-distance")
+        cp.set("marginalized_prior-distance", "name", "uniform")
+        cp.set("marginalized_prior-distance", "min-distance", "50")
+        cp.set("marginalized_prior-distance", "max-distance", "5000")
+        cp.add_section("variable_params")
+        cp.set("variable_params", "tc", "")
+        cp.add_section("static_params")
+        for key in param.keys():
+            cp.set("static_params", key, param[key])
+        cp.add_section("prior-tc")
+        cp.set("prior-tc", "name", "uniform")
+        cp.set("prior-tc", "min-tc", "1126259462.32")
+        cp.set("prior-tc", "max-tc", "1126259462.52")
+
+        data = {ifo: random_data for ifo in self.ifos}
+        model = models.MarginalizedGaussianNoise.from_config(cp, data)
+        marg_priors = model._marg_prior
+        keys = list(marg_priors.keys())
+        assert keys[0] == "distance"
+        assert model._margdist
+        assert marg_priors["distance"].bounds["distance"].min == 50.0
+        assert marg_priors["distance"].bounds["distance"].max == 5000.0
