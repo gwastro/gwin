@@ -78,6 +78,15 @@ A simple configuration file for parameter estimation on the ringdown is::
 
 If you want to use another variable parameter in the inference sampler then add its name to ``[variable_params]`` and add a prior section like shown above.
 
+The number of likelihood calculations grows exponentially with the number of variable parameters, and so in order to keep computational costs to a minimum, we can choose to marginalize over time and/or distance and/or phase. This removes the need to sample over those dimensions without affecting the other posterior PDFs. 
+
+We can turn on likehood marginalization by specifying the ``marginalized_gaussian_noise`` class in the ``[model]`` section. For example, we can modify the simple configuration file above to include distance marginalization,
+
+.. literalinclude:: ../../examples/workflow/GW150914_example/marginalized_gwin.ini           
+      :language: ini
+
+If you want to also marginalize over time and/or phase, then add its name to the ``[model]`` section and add a corresponding prior under the section ``[marginalized_prior-${VARIABLE}]`` like shown above. If this was the case, then for this trivial example, you would no longer need to sample over the phase and coalescence time.
+
 When working on real data, it is necessary to marginalise over calibration uncertainty.
 The model and parameters describing the calibration uncertainty can be passed in another ini file, e.g.:
 
