@@ -39,24 +39,16 @@ class TestNoPrior(object):
         assert p() == 0.
 
 
-class TestBaseModel(_TestBase):
+class _TestBaseModel(_TestBase):
     """Tests BaseModel."""
 
-    class DummyBase(models.base.BaseModel):
-        """BaseModel cannot be initialized because it is an abstract base
-        class. It should only require ``_loglikelihood`` to be defined. This
-        tests that.
-        """
-        def _loglikelihood(self):
-            return 0.
-
-    TEST_CLASS = DummyBase
+    TEST_CLASS = models.base.BaseModel
     CALL_CLASS = models.CallModel
     DEFAULT_CALLSTAT = 'logposterior'
 
     @classmethod
     def setup_class(cls):
-        super(TestBaseModel, cls).setup_class()
+        super(_TestBaseModel, cls).setup_class()
 
         cls.data = range(10)
 
@@ -82,10 +74,16 @@ class TestBaseModel(_TestBase):
         finally:
             simple._sampling_transforms = _st
 
+    def test_default_stats(self, simple):
+        # tests that the default stats always has at least logjacobian,
+        # logprior, and loglikelihooe
+        expected = set(['logjacobian', 'logprior', 'loglikelihood'])
+        assert expected.issubset(set(simple.default_stats))
+
 
 # -- GaussianNoise -------------------------------------------------------
 
-class TestGaussianNoise(TestBaseModel):
+class TestGaussianNoise(_TestBaseModel):
     TEST_CLASS = models.GaussianNoise
     DEFAULT_CALLSTAT = 'logplr'
 
