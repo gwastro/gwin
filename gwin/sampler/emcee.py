@@ -124,7 +124,9 @@ class EmceeEnsembleSampler(MCMCAutocorrSupport, BaseMCMC, BaseSampler):
         The returned array has shape ``nwalkers x niterations``.
         """
         stats = self.model.default_stats
-        return blob_data_to_dict(stats, self._sampler.blobs)
+        blobs = self._sampler.get_blobs()
+        blob_dict = {k: blobs[:,:,i].transpose() for i, k in enumerate(stats)}
+        return blob_dict
 
     def clear_samples(self):
         """Clears the samples and stats from memory.
@@ -134,7 +136,6 @@ class EmceeEnsembleSampler(MCMCAutocorrSupport, BaseMCMC, BaseSampler):
         self._itercounter = 0
         # now clear the chain
         self._sampler.reset()
-        self._sampler.clear_blobs()
 
     def set_state_from_file(self, filename):
         """Sets the state of the sampler back to the instance saved in a file.
@@ -159,10 +160,8 @@ class EmceeEnsembleSampler(MCMCAutocorrSupport, BaseMCMC, BaseSampler):
         pos = self._pos
         if pos is None:
             pos = self._p0
-        res = self._sampler.run_mcmc(pos, niterations, **kwargs)
-        p, _, _ = res[0], res[1], res[2]
-        # update the positions
-        self._pos = p
+        state = self._sampler.run_mcmc(pos, niterations, **kwargs)
+        self._pos = state.coords
 
     def write_results(self, filename):
         """Writes samples, model stats, acceptance fraction, and random state

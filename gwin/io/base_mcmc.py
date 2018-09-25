@@ -69,7 +69,9 @@ class MCMCIO(object):
             to file. The default (None) is to use the maximum size allowed by
             h5py.
         """
+        #print samples, samples.values()[0].shape
         nwalkers, niterations = samples.values()[0].shape
+
         assert all(p.shape == (nwalkers, niterations)
                    for p in samples.values()), (
                "all samples must have the same shape")
