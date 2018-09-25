@@ -38,7 +38,7 @@ from .base_mcmc import (BaseMCMC, MCMCAutocorrSupport, raw_samples_to_dict,
 from ..burn_in import MCMCBurnInTests
 from ..io import EmceeFile
 from .. import models
-from . import jump
+from . import jump as jumper
 
 
 #
@@ -202,13 +202,13 @@ class EmceeEnsembleSampler(MCMCAutocorrSupport, BaseMCMC, BaseSampler):
         checkpoint_interval = cls.checkpoint_from_config(cp, section)
 
         # get the jump proposal if selected
-        jump = jump.get_jump_from_config(section, cp)
+        jump_proposer = jumper.get_jump_from_config(section, cp)
 
         # get the logpost function
         lnpost = get_optional_arg_from_config(cp, section, 'logpost-function')
         obj = cls(model, nwalkers, checkpoint_interval=checkpoint_interval,
                   logpost_function=lnpost, nprocesses=nprocesses,
-                  jump=jump, use_mpi=use_mpi)
+                  jump=jump_proposer, use_mpi=use_mpi)
         # set target
         obj.set_target_from_config(cp, section)
         # add burn-in if it's specified
