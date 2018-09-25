@@ -38,6 +38,7 @@ from .base_mcmc import (BaseMCMC, MCMCAutocorrSupport, raw_samples_to_dict,
 from ..burn_in import MCMCBurnInTests
 from ..io import EmceeFile
 from .. import models
+from . import jump
 
 
 #
@@ -68,7 +69,7 @@ class EmceeEnsembleSampler(MCMCAutocorrSupport, BaseMCMC, BaseSampler):
     burn_in_class = MCMCBurnInTests
 
     def __init__(self, model, nwalkers, checkpoint_interval=None,
-                 logpost_function=None, nprocesses=1, use_mpi=False):
+                 logpost_function=None, nprocesses=1, use_mpi=False, jump=None):
 
         self.model = model
         # create a wrapper for calling the model
@@ -89,7 +90,7 @@ class EmceeEnsembleSampler(MCMCAutocorrSupport, BaseMCMC, BaseSampler):
         self._nwalkers = nwalkers
         ndim = len(model.variable_params)
         self._sampler = emcee.EnsembleSampler(nwalkers, ndim, model_call,
-                                              pool=pool)
+                                              pool=pool, moves=jump)
         # emcee uses it's own internal random number generator; we'll set it
         # to have the same state as the numpy generator
         rstate = numpy.random.get_state()
@@ -199,11 +200,15 @@ class EmceeEnsembleSampler(MCMCAutocorrSupport, BaseMCMC, BaseSampler):
         nwalkers = int(cp.get(section, "nwalkers"))
         # get the checkpoint interval, if it's specified
         checkpoint_interval = cls.checkpoint_from_config(cp, section)
+
+        # get the jump proposal if selected
+        jump = jump.get_jump_from_config(section, cp)
+
         # get the logpost function
         lnpost = get_optional_arg_from_config(cp, section, 'logpost-function')
         obj = cls(model, nwalkers, checkpoint_interval=checkpoint_interval,
                   logpost_function=lnpost, nprocesses=nprocesses,
-                  use_mpi=use_mpi)
+                  jump=jump, use_mpi=use_mpi)
         # set target
         obj.set_target_from_config(cp, section)
         # add burn-in if it's specified
